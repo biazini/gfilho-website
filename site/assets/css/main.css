@@ -279,7 +279,23 @@ h2{font-family:var(--font-read);font-weight:500;font-size:var(--fs-h2);line-heig
  .facts div:nth-child(3){border-left:0}
  .row{padding:16px}
  .art{padding:18px 16px}
- .foot{flex-direction:column;align-items:flex-start}
+ /* compact footer: brand | ©  /  section links in one row  /  location | email */
+ .foot{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px 16px;padding-block:20px 22px;font-size:.8125rem}
+ .foot-brand{grid-column:1;grid-row:1}
+ .foot-meta{display:contents}
+ .foot-meta span:last-child{grid-column:2;grid-row:1;justify-self:end}
+ .foot-meta span:nth-child(1){grid-column:1;grid-row:3}
+ .foot-meta span:nth-child(2){grid-column:2;grid-row:3;justify-self:end}
+ .foot-nav{grid-column:1/-1;grid-row:2;margin-inline:-8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;border-block:1px solid var(--rule);padding-block:2px}
+ .foot-nav::-webkit-scrollbar{display:none}
+ .foot-nav .snav-label{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ .foot-nav a{min-height:40px;padding:0 8px;font-size:.875rem;white-space:nowrap}
+}
+@media (max-width:359px){
+ /* too narrow for two columns: location and email stack under the brand row */
+ .foot-meta span:nth-child(1),.foot-meta span:nth-child(2){grid-column:1/-1;justify-self:start}
+ .foot-meta span:nth-child(2){grid-row:4}
+ .foot-nav a{padding:0 6px}
 }
 /* phones: keep "Automation • Infrastructure" on one line next to the theme and Contact buttons
    (it wrapped below ~400px and made the brand block look oversized and off-centre) */

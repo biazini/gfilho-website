@@ -86,6 +86,7 @@ Conventions:
 - **Footer year:** set by `main.js` from the visitor's clock; the year written in the HTML is only a fallback for clients without JavaScript.
 - **CSP:** the policy only allows same-origin resources. Inline `<script>` and `style=""` attributes are blocked; keep styles in `main.css` and code in `main.js` (`theme.js` is the one script loaded before the stylesheet).
 - **Mobile header:** below 430 px the brand block is set slightly smaller so "Automation • Infrastructure" stays on one line next to the theme and Contact buttons (from 360 px up).
+- **Mobile footer:** below 720 px the footer is a compact three-row grid (brand and ©, the section links in one row, location and email). The "On this page" label stays in the markup for screen readers but is visually hidden there, since the header shows the same sections.
 
 ## Images
 
