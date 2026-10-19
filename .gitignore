@@ -1,0 +1,33 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# secrets and local environment
+.env
+.env.*
+*.pem
+*.key
+*credentials*.json
+
+# backups, logs, temporary files
+*.bak
+*.bak-*
+*.old
+*.orig
+*.log
+*.tmp
+tmp/
+
+# tooling
+node_modules/
+.lighthouseci/
+lighthouse*.json
+
+# private working documents (audit and implementation reports stay local)
+audit/
+reports/
