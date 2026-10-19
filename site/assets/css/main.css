@@ -281,6 +281,15 @@ h2{font-family:var(--font-read);font-weight:500;font-size:var(--fs-h2);line-heig
  .art{padding:18px 16px}
  .foot{flex-direction:column;align-items:flex-start}
 }
+/* phones: keep "Automation • Infrastructure" on one line next to the theme and Contact buttons
+   (it wrapped below ~400px and made the brand block look oversized and off-centre) */
+@media (max-width:430px){
+ .hdr-in{column-gap:6px}
+ .brand{gap:10px}
+ .brand-mark{width:30px;height:30px;border-radius:8px}
+ .brand-txt b{font-size:1.0625rem}
+ .brand-txt small{font-size:.6875rem;letter-spacing:.05em;gap:0 4px}
+}
 @media (max-width:420px){
  .kpis{grid-template-columns:minmax(0,1fr)}
  .kpi:nth-child(2){border-top:1px solid var(--rule)}

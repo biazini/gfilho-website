@@ -11,7 +11,7 @@ A static, single-page site: plain HTML, CSS and a small JavaScript file. No fram
 | **Security** | Strict same-origin CSP, security headers, loopback-only origin, HTTPS-only canonical host |
 | **Quality** | W3C-valid HTML and CSS · Lighthouse 100 accessibility, best practices and SEO |
 
-![gfilho.net](site/og-image.png)
+<p align="center"><img src="site/og-image.png" alt="gfilho.net social preview" width="420"></p>
 
 ## Contents
 
@@ -40,7 +40,7 @@ deploy/
   nginx/                 server blocks, security headers, cache rules, redirects
 tools/
   build-images.ps1       regenerate og-image.png, icons and favicon.ico with headless Chrome
-  og-image.html, icon.html
+  og-image.html, icon.html, logo-full-bleed.svg
 ```
 
 ## Hosting
@@ -84,15 +84,20 @@ Conventions:
 - **security.txt:** `site/.well-known/security.txt` ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)) expires on 2027-10-18. `deploy.sh` warns 30 days before the `Expires:` date (and after it has passed) and prints a renewal date one year ahead; update the file by hand and deploy again.
 - **Themes:** dark and light colour tokens live at the top of `main.css` (both blocks must stay in sync). Without a saved choice the page follows the OS (`prefers-color-scheme`); the header button saves the visitor’s choice in `localStorage`.
 - **Footer year:** set by `main.js` from the visitor's clock; the year written in the HTML is only a fallback for clients without JavaScript.
-- **CSP:** the policy only allows same-origin resources. Inline `<script>` and `style=""` attributes are blocked; keep styles in `main.css` and code in `main.js`.
+- **CSP:** the policy only allows same-origin resources. Inline `<script>` and `style=""` attributes are blocked; keep styles in `main.css` and code in `main.js` (`theme.js` is the one script loaded before the stylesheet).
+- **Mobile header:** below 430 px the brand block is set slightly smaller so "Automation • Infrastructure" stays on one line next to the theme and Contact buttons (from 360 px up).
 
 ## Images
+
+**Logo.** Three isometric slabs on a midnight-blue tile. The source is `site/favicon.svg`; the same artwork is inlined as the `#logo` symbol at the top of `index.html` (header and footer), so keep the two in sync. `tools/logo-full-bleed.svg` is the edge-to-edge variant used for `apple-touch-icon.png`, because iOS rounds the corners itself.
 
 `og-image.png` (1200×630 social preview), the PNG icons and `favicon.ico` are generated from `tools/*.html`. On Windows with Google Chrome installed:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-images.ps1
 ```
+
+After regenerating, bump `?v=` on the icon, manifest and `og:image` URLs in `index.html` and `404.html` (and on the icons in `site.webmanifest`) so browsers and link previews fetch the new files.
 
 ## Security
 
