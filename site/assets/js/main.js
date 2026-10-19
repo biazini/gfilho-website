@@ -22,7 +22,7 @@
       toggle.title = label;
       // keep the browser bar in step with an explicit choice
       if (root.hasAttribute('data-theme')) {
-        for (var i = 0; i < bars.length; i++) bars[i].setAttribute('content', mode === 'dark' ? '#10172A' : '#F5F7FB');
+        for (var i = 0; i < bars.length; i++) bars[i].setAttribute('content', mode === 'dark' ? '#10172A' : '#E8EDF4');
       }
     };
     toggle.addEventListener('click', function () {
