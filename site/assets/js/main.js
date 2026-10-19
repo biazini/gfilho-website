@@ -6,6 +6,36 @@
   var yr = document.getElementById('yr');
   if (yr) yr.textContent = String(new Date().getFullYear());
 
+  // Light/dark switch. Until the visitor picks one, the page follows the OS setting (CSS media
+  // query); a click saves the opposite of the theme on screen, and theme.js restores it next time.
+  var toggle = document.querySelector('.theme-toggle');
+  if (toggle) {
+    var root = document.documentElement;
+    var prefersLight = window.matchMedia('(prefers-color-scheme: light)');
+    var bars = document.querySelectorAll('meta[name="theme-color"]');
+    var shown = function () { return root.getAttribute('data-theme') || (prefersLight.matches ? 'light' : 'dark'); };
+    var paint = function () {
+      var mode = shown();
+      var label = mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme';
+      toggle.setAttribute('data-mode', mode);
+      toggle.setAttribute('aria-label', label);
+      toggle.title = label;
+      // keep the browser bar in step with an explicit choice
+      if (root.hasAttribute('data-theme')) {
+        for (var i = 0; i < bars.length; i++) bars[i].setAttribute('content', mode === 'dark' ? '#10172A' : '#F5F7FB');
+      }
+    };
+    toggle.addEventListener('click', function () {
+      var next = shown() === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch (e) { /* not saved: applies to this page only */ }
+      paint();
+    });
+    if (prefersLight.addEventListener) prefersLight.addEventListener('change', paint);
+    paint();
+    toggle.hidden = false;
+  }
+
   var nav = document.querySelector('.nav');
   if (!nav) return;
   var links = Array.prototype.slice.call(nav.querySelectorAll('a[href^="#"]'));
