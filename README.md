@@ -79,8 +79,9 @@ Conventions:
 
 - **Articles and projects:** the newest goes first. The featured project keeps `id="latest-project"`, which the "Latest project" link points to.
 - **Cache busting:** CSS and JS are cached for an hour. After changing them, bump `?v=` in the `<link>` and `<script>` tags of `index.html` (and in `404.html` for the CSS).
-- **Sitemap:** update `<lastmod>` in `site/sitemap.xml` when the content changes.
-- **security.txt:** `site/.well-known/security.txt` ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)) expires on 2027-10-18. Renew the `Expires:` date before then, to no more than a year ahead.
+- **Sitemap:** `deploy.sh` sets `<lastmod>` in `site/sitemap.xml` to the current date whenever `index.html` differs from what is deployed. Commit the updated `sitemap.xml` together with the page.
+- **security.txt:** `site/.well-known/security.txt` ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)) expires on 2027-10-18. `deploy.sh` warns 30 days before the `Expires:` date (and after it has passed) and prints a renewal date one year ahead; update the file by hand and deploy again.
+- **Footer year:** set by `main.js` from the visitor's clock; the year written in the HTML is only a fallback for clients without JavaScript.
 - **CSP:** the policy only allows same-origin resources. Inline `<script>` and `style=""` attributes are blocked; keep styles in `main.css` and code in `main.js`.
 
 ## Images

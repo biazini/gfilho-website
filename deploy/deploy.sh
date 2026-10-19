@@ -18,6 +18,28 @@ esac
 [ "$(id -u)" -eq 0 ] || { echo "run as root (sudo)" >&2; exit 1; }
 src="$(cd "$(dirname "$0")/../site" && pwd)"
 [ -f "$src/index.html" ] || { echo "site/index.html not found in $src" >&2; exit 1; }
+today="$(date +%Y-%m-%d)"
+
+# sitemap.xml: when the page changes, set <lastmod> to today in site/ (commit it afterwards)
+if ! cmp -s "$src/index.html" "$dest/index.html" && [ -f "$src/sitemap.xml" ]; then
+  if ! grep -q "<lastmod>${today}</lastmod>" "$src/sitemap.xml"; then
+    sed -i -E "s#<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>#<lastmod>${today}</lastmod>#" "$src/sitemap.xml"
+    echo "sitemap: index.html changed, <lastmod> set to ${today} (commit site/sitemap.xml)"
+  fi
+fi
+
+# security.txt (RFC 9116): warn 30 days before Expires; the date itself is renewed by hand
+sec="$src/.well-known/security.txt"
+if [ -f "$sec" ]; then
+  expires="$(sed -n 's/^Expires:[[:space:]]*//p' "$sec" | head -n1 | tr -d '\r')"
+  left=$(( ( $(date -d "$expires" +%s) - $(date +%s) ) / 86400 ))
+  renew="$(date -u -d "+364 days" +%Y-%m-%dT23:00:00.000Z)"
+  if [ "$left" -lt 0 ]; then
+    echo "WARNING: security.txt expired $(( -left )) days ago. Set 'Expires: ${renew}' in site/.well-known/security.txt and deploy again." >&2
+  elif [ "$left" -le 30 ]; then
+    echo "WARNING: security.txt expires in ${left} days. Set 'Expires: ${renew}' in site/.well-known/security.txt and deploy again." >&2
+  fi
+fi
 
 stamp="$(date +%Y%m%d-%H%M%S)"
 backup="/var/backups/gfilho/${stamp}-${target}"
