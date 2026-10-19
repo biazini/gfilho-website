@@ -4,6 +4,24 @@ Source of [gfilho.net](https://gfilho.net/), the personal site of Guilherme Filh
 
 A static, single-page site: plain HTML, CSS and a small JavaScript file. No framework, no build step, no third-party requests at runtime.
 
+| | |
+|---|---|
+| **Live site** | <https://gfilho.net/> |
+| **Stack** | HTML5, CSS, vanilla JavaScript · nginx (WSL, Ubuntu) · Cloudflare Tunnel |
+| **Security** | Strict same-origin CSP, security headers, loopback-only origin, HTTPS-only canonical host |
+| **Quality** | W3C-valid HTML and CSS · Lighthouse 100 accessibility, best practices and SEO |
+
+![gfilho.net](site/og-image.png)
+
+## Contents
+
+- [Structure](#structure)
+- [Hosting](#hosting)
+- [Working on the site](#working-on-the-site)
+- [Images](#images)
+- [Security](#security)
+- [Licenses](#licenses)
+
 ## Structure
 
 ```
@@ -72,8 +90,15 @@ Conventions:
 powershell -ExecutionPolicy Bypass -File tools\build-images.ps1
 ```
 
-## Licences
+## Security
 
-- Fonts: [Newsreader](https://github.com/productiontype/Newsreader) and [Hanken Grotesk](https://github.com/marcologous/hanken-grotesk), both under the SIL Open Font License 1.1. The licence texts are in `site/assets/fonts/`.
-- Icons are based on [Lucide](https://lucide.dev/) (ISC licence, see `site/assets/LICENSE-lucide.txt`).
-- Text, photo and logo: © Guilherme Filho.
+Report security problems privately, as described in the [security policy](.github/SECURITY.md). Please do not open public issues for them.
+
+## Licenses
+
+| Content | License |
+|---|---|
+| Code and configuration: HTML structure, CSS, JavaScript, everything under `deploy/` and `tools/` | [MIT License](LICENSE) |
+| Personal content: text, profile photo, logo and `og-image.png` | © Guilherme Filho, all rights reserved |
+| Fonts: [Newsreader](https://github.com/productiontype/Newsreader) and [Hanken Grotesk](https://github.com/marcologous/hanken-grotesk) | SIL Open Font License 1.1 (`site/assets/fonts/OFL-*.txt`) |
+| Icons: based on [Lucide](https://lucide.dev/) | ISC License (`site/assets/LICENSE-lucide.txt`) |

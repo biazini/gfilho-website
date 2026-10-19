@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem in this website
+    url: https://github.com/biazini/gfilho-website/security/advisories/new
+    about: Report privately through GitHub's private vulnerability reporting.
+  - name: Contact
+    url: https://gfilho.net/#links
+    about: For anything else, use the contact details on the website.

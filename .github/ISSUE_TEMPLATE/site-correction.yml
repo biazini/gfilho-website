@@ -1,0 +1,26 @@
+name: Site correction
+description: Point out a broken link, a display problem or an accessibility issue on gfilho.net.
+title: "[Site]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository does not accept public issues. Security problems must be reported privately — see the [security policy](https://github.com/biazini/gfilho-website/security/policy).
+  - type: input
+    id: location
+    attributes:
+      label: Page section or file
+      placeholder: e.g. Toolbox, Links, site/assets/css/main.css
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong
+      description: What you saw, and the browser, device and screen width if it is a display problem.
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Suggested correction
