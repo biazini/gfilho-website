@@ -1,0 +1,6 @@
+Contact: https://github.com/biazini/gfilho-website/security/advisories/new
+Contact: mailto:g.biazini.filho@outlook.com
+Expires: 2027-10-18T23:00:00.000Z
+Preferred-Languages: en, pt
+Canonical: https://gfilho.net/.well-known/security.txt
+Policy: https://github.com/biazini/gfilho-website/security/policy

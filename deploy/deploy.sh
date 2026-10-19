@@ -27,7 +27,9 @@ chmod -R go-rwx /var/backups/gfilho
 echo "backup:  $backup"
 
 # --delete-excluded: the target is an exact copy of site/, so stray dotfiles and backups are removed too
+# (/.well-known/ is the one dot-directory that is published: it holds security.txt)
 rsync -a --delete --delete-excluded --checksum --chmod=D755,F644 \
+  --include='/.well-known/' --include='/.well-known/**' \
   --exclude='.*' --exclude='*.bak' --exclude='*~' \
   "$src/" "$dest/"
 chown -R root:root "$dest"
