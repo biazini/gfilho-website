@@ -1,0 +1,75 @@
+// Alloy: ships the nginx logs and the journal of the site's services to Loki (127.0.0.1:3100).
+// Labels stay few (job, log, env, unit); fields such as status and path are parsed at query time.
+
+local.file_match "nginx" {
+  path_targets = [
+    {"__path__" = "/var/log/nginx/access.log", "job" = "nginx", "log" = "access", "env" = "production"},
+    {"__path__" = "/var/log/nginx/gfilho-staging.access.log", "job" = "nginx", "log" = "access", "env" = "staging"},
+    {"__path__" = "/var/log/nginx/error.log", "job" = "nginx", "log" = "error"},
+  ]
+}
+
+loki.source.file "nginx" {
+  targets       = local.file_match.nginx.targets
+  // first run reads the current files from the start (today's traffic); positions are kept afterwards
+  forward_to    = [loki.process.nginx.receiver]
+  tail_from_end = false
+}
+
+loki.process "nginx" {
+  // access log: [20/Oct/2026:16:46:55 +0100]
+  stage.match {
+    selector = "{log=\"access\"}"
+    stage.regex {
+      expression = "\\[(?P<ts>[^\\]]+)\\]"
+    }
+    stage.timestamp {
+      source = "ts"
+      format = "02/Jan/2006:15:04:05 -0700"
+    }
+  }
+  // error log: 2026/10/20 14:06:23 [error] ...
+  stage.match {
+    selector = "{log=\"error\"}"
+    stage.regex {
+      expression = "^(?P<ts>\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}:\\d{2}) \\[(?P<level>[a-z]+)\\]"
+    }
+    stage.timestamp {
+      source   = "ts"
+      format   = "2006/01/02 15:04:05"
+      location = "Europe/Lisbon"
+    }
+    stage.labels {
+      values = { level = "" }
+    }
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.relabel "journal" {
+  forward_to = []
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+}
+
+// Only the units that matter for the site (matches on the same field are ORed by the journal).
+loki.source.journal "units" {
+  path          = "/var/log/journal"
+  matches       = "_SYSTEMD_UNIT=nginx.service _SYSTEMD_UNIT=cloudflared.service _SYSTEMD_UNIT=logrotate.service _SYSTEMD_UNIT=gfilho-metrics.service"
+  max_age       = "24h"
+  labels        = { job = "systemd-journal" }
+  relabel_rules = loki.relabel.journal.rules
+  forward_to    = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://127.0.0.1:3100/loki/api/v1/push"
+  }
+}

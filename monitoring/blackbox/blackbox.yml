@@ -1,0 +1,44 @@
+# blackbox-exporter modules (127.0.0.1:9115). The User-Agent lets the dashboard leave these
+# probes out of the visitor figures.
+modules:
+  http_site:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      fail_if_not_ssl: true
+      fail_if_body_not_matches_regexp: ["Guilherme Filho"]
+      preferred_ip_protocol: ip4
+      headers: { User-Agent: "gfilho-monitor/1.0 (blackbox)" }
+
+  http_origin:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      fail_if_body_not_matches_regexp: ["Guilherme Filho"]
+      preferred_ip_protocol: ip4
+      headers: { User-Agent: "gfilho-monitor/1.0 (blackbox)" }
+
+  http_redirect:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [301]
+      follow_redirects: false
+      preferred_ip_protocol: ip4
+      headers: { User-Agent: "gfilho-monitor/1.0 (blackbox)" }
+
+  dns_a:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: gfilho.net
+      query_type: A
+      valid_rcodes: [NOERROR]
+      preferred_ip_protocol: ip4
+      validate_answer_rrs:
+        fail_if_not_matches_regexp: ["gfilho\\.net\\.\\s+\\d+\\s+IN\\s+A\\s+"]

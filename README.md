@@ -9,7 +9,7 @@ A static, single-page site: plain HTML, CSS and two small JavaScript files. No f
 | | |
 |---|---|
 | **Live site** | <https://gfilho.net/> |
-| **Stack** | HTML5, CSS, vanilla JavaScript · nginx 1.28 (WSL 2, Ubuntu 24.04 LTS) · Cloudflare Tunnel |
+| **Stack** | HTML5, CSS, vanilla JavaScript · nginx 1.28 (WSL 2, Ubuntu 26.04 LTS) · Cloudflare Tunnel |
 | **Security** | Strict same-origin CSP, security headers on every response, loopback-only origin, HTTPS-only canonical host, [security.txt](https://gfilho.net/.well-known/security.txt) |
 | **Quality** | W3C-valid HTML and CSS · WCAG 2.2 AA · Lighthouse 100 for accessibility, best practices and SEO |
 
@@ -25,8 +25,9 @@ A static, single-page site: plain HTML, CSS and two small JavaScript files. No f
 6. [Design notes](#6-design-notes)
 7. [Images and diagrams](#7-images-and-diagrams)
 8. [Checking a release](#8-checking-a-release)
-9. [Security](#9-security)
-10. [Licenses](#10-licenses)
+9. [Monitoring](#9-monitoring)
+10. [Security](#10-security)
+11. [Licenses](#11-licenses)
 
 ---
 
@@ -55,8 +56,10 @@ Visitors reach Cloudflare over HTTPS. Cloudflare terminates TLS and forwards the
 | `cloudflared` | WSL, systemd | Holds the tunnel open. No inbound port is needed on the host or the router. |
 | nginx, production | `127.0.0.1:8088` | Serves `/var/www/html`, the live site. |
 | nginx, staging | `127.0.0.1:8089` | Serves `/var/www/gfilho-staging` for local previews; never published. |
+| nginx, status | `127.0.0.1:8090` | `stub_status` counters for the monitoring stack; loopback only. |
 | `deploy/deploy.sh` | WSL | Publishes `site/` to staging or production, with a backup and a smoke test. |
 | Backups | `/var/backups/gfilho` | One snapshot of the target per deploy (and of the nginx configuration per install), readable by root only. |
+| Monitoring | WSL, Docker, loopback ports | Prometheus, Loki, Alloy, exporters and Grafana on `http://localhost:3000` ([9. Monitoring](#9-monitoring)). |
 | Source repository | GitHub | `main` is protected by a ruleset (no deletion, no force push); secret scanning, push protection and private vulnerability reporting are on. |
 
 ## 3. Request handling
@@ -69,7 +72,8 @@ Both server blocks include the same snippet, [`deploy/nginx/gfilho-common.conf`]
 
 1. **Canonical host.** Requests for `www.gfilho.net`, or requests that reached Cloudflare over plain HTTP (the `CF-Visitor` header carries `"scheme":"http"`), get a `301` to `https://gfilho.net` with the same path.
 2. **Hidden files.** Dotfiles (except `/.well-known/`), editor leftovers and backup files (`.bak`, `.old`, `.orig`, `.swp`, `~` and similar) always return `404`, even if one ends up in the web root by mistake.
-3. **Static files.** Anything else is served from the web root with `try_files`; a missing file gets the custom `/404.html` page with a real `404` status.
+3. **Directories.** A directory without the trailing slash (`/cases/self-healing`) gets a **relative** `301` to `/cases/self-healing/` (`absolute_redirect off`, so nginx never sends its internal `:8088` port). `/cases/` itself redirects to `/#projects`, and any other directory without an `index.html` (`/assets/`, `/.well-known/`) gets the 404 page instead of nginx's default 403.
+4. **Static files.** Anything else is served from the web root with `try_files`; a missing file gets the custom `/404.html` page with a real `404` status.
 
 Security headers are set at server level with `always`, so they are sent on every response, including redirects and errors:
 
@@ -113,7 +117,11 @@ Cache lifetimes depend on the path:
 ├── deploy/
 │   ├── deploy.sh                Publish site/ to staging or production (backup, sync, smoke test)
 │   ├── install-nginx.sh         Install the nginx configuration (rolls back if `nginx -t` fails)
-│   └── nginx/                   Server blocks, security headers, cache rules, redirects
+│   ├── nginx/                   Server blocks, security headers, cache rules, redirects, stub_status
+│   └── systemd/                 nginx drop-in: restart automatically if it dies
+├── monitoring/                  Prometheus, Loki, Alloy, exporters and Grafana (Docker Compose)
+│   ├── install-monitoring.sh    Install or update the stack (run as root in WSL)
+│   └── grafana/dashboards/      The gfilho.net dashboard (provisioned, read-only)
 ├── docs/architecture/           Diagrams: draw.io sources and PNG exports
 ├── tools/
 │   ├── build-images.ps1         Regenerate og-image.png, the icons and favicon.ico with headless Chrome
@@ -128,7 +136,8 @@ Cache lifetimes depend on the path:
 
 | Requirement | Used for |
 |---|---|
-| WSL 2 with Ubuntu 24.04 LTS, nginx, `rsync` and `curl` | Serving and deploying the site (run the scripts as root). |
+| WSL 2 with Ubuntu 26.04 LTS, nginx, `rsync` and `curl` | Serving and deploying the site (run the scripts as root). The WSL distribution is still called `Ubuntu-24.04`: it was upgraded in place. |
+| Docker Engine with the Compose plugin (inside WSL) | The local monitoring stack ([9. Monitoring](#9-monitoring)). Not needed to serve the site. |
 | `cloudflared` with a named tunnel whose ingress points at `http://localhost:8088` | Publishing production. Not needed to work on staging. |
 | Google Chrome on Windows | Regenerating images (`tools/build-images.ps1`). |
 | A code editor; optionally VS Code with the Draw.io Integration extension (`hediet.vscode-drawio`) | Editing the page and the diagrams. |
@@ -152,7 +161,7 @@ bash deploy/deploy.sh staging
 bash deploy/deploy.sh production
 ```
 
-`install-nginx.sh` backs up the current nginx configuration first and restores it automatically if `nginx -t` fails. If the listen addresses changed, it restarts nginx instead of reloading it, because a reload cannot move an existing socket from `0.0.0.0` to loopback.
+`install-nginx.sh` backs up the current nginx configuration first and restores it automatically if `nginx -t` fails. It also installs a systemd drop-in (`deploy/systemd/nginx-restart.conf`) so that nginx restarts by itself if it ever dies; the stock Ubuntu unit has no restart policy. If the listen addresses changed, it restarts nginx instead of reloading it, because a reload cannot move an existing socket from `0.0.0.0` to loopback.
 
 ### 5.3 What `deploy.sh` does
 
@@ -172,7 +181,7 @@ ls /var/backups/gfilho/
 rsync -a --delete /var/backups/gfilho/<snapshot>/ /var/www/html/
 ```
 
-Snapshots ending in `-nginx` hold the nginx configuration (`sites-available`, `sites-enabled` and `snippets`) from before an `install-nginx.sh` run.
+Snapshots ending in `-nginx` hold the nginx configuration (`sites-available`, `sites-enabled`, `snippets` and the systemd drop-in) from before an `install-nginx.sh` run.
 
 ### 5.5 Conventions
 
@@ -219,6 +228,9 @@ curl -sI https://www.gfilho.net/ | grep -iE '^(HTTP|location)'
 # security headers
 curl -sI https://gfilho.net/ | grep -iE 'content-security-policy|x-content-type|x-frame|referrer-policy|permissions-policy|cross-origin-opener|strict-transport'
 
+# directory without the trailing slash: expect a relative Location, /cases/self-healing/
+curl -sI https://gfilho.net/cases/self-healing | grep -i '^location'
+
 # custom 404 and blocked files: expect 404 for both
 curl -s -o /dev/null -w '%{http_code}\n' https://gfilho.net/no-such-page
 curl -s -o /dev/null -w '%{http_code}\n' https://gfilho.net/.git/config
@@ -226,15 +238,41 @@ curl -s -o /dev/null -w '%{http_code}\n' https://gfilho.net/.git/config
 
 For a full audit, run [Lighthouse](https://developer.chrome.com/docs/lighthouse) (Chrome DevTools › Lighthouse, or `npx lighthouse https://gfilho.net/`), and validate the page with the [W3C HTML](https://validator.w3.org/nu/?doc=https%3A%2F%2Fgfilho.net%2F) and [CSS](https://jigsaw.w3.org/css-validator/validator?uri=https%3A%2F%2Fgfilho.net%2F) validators.
 
-## 9. Security
+## 9. Monitoring
+
+A local stack watches the site, the tunnel and the WSL host, and shows everything on one Grafana dashboard. Grafana opens at **<http://localhost:3000>** on this PC, read-only and without a login. The admin password is generated on the first install and is stored only in `/etc/gfilho-monitoring/grafana.env` (`sudo cat` it in WSL).
+
+```bash
+# install or update (copies monitoring/ to /opt/gfilho-monitoring and starts the containers)
+bash monitoring/install-monitoring.sh
+```
+
+| Component | Port (loopback) | What it collects |
+|---|---|---|
+| Prometheus | 9091 | Metrics, 30 days; alert rules in `monitoring/prometheus/rules.yml` |
+| blackbox-exporter | 9115 | Probes of the public pages (every 60 s), the origin and staging, the 301 redirects and DNS |
+| nginx-prometheus-exporter | 9113 | Connections and requests from nginx `stub_status` (`127.0.0.1:8090`) |
+| node-exporter | 9100 | CPU, memory, disk, network, systemd units, and the custom `gfilho_*` metrics |
+| `gfilho-metrics.timer` | — | Every 2 min: security.txt expiry, last deploy, backups, WSL offline time, pending updates, component versions |
+| `cloudflared` | 20241 | Tunnel connections, requests, errors and QUIC latency (built into cloudflared) |
+| Loki + Alloy | 3100 | nginx access and error logs, and the journal of nginx, cloudflared and logrotate; 14 days |
+| Grafana | 3000 | The dashboard `gfilho.net — Monitorização` |
+
+The dashboard shows the current state (site, origin, tunnel, response time, TLS and security.txt expiry, active alerts), availability and latency over time, visitor traffic (pages, 404s, referrers, browsers vs bots), the tunnel, systemd services, host resources and the latest logs. The probes send the User-Agent `gfilho-monitor`, and the traffic panels leave them out. The logs do not record visitor IP addresses, so there are no "unique visitor" figures.
+
+The stack runs inside the same WSL as the site, so it can only show when the site was down **after** WSL comes back. Nothing here can send a notification while the PC is off. For that, add an external uptime monitor for `https://gfilho.net/` (for example a free HTTP monitor with email alerts) and the tunnel health notification in Cloudflare.
+
+The containers restart with Docker when WSL starts. To stop the stack: `docker compose -f /opt/gfilho-monitoring/docker-compose.yml down` (add `-v` to delete the stored metrics and logs).
+
+## 10. Security
 
 Report security problems privately, as described in the [security policy](.github/SECURITY.md) (the contact details are also in [`/.well-known/security.txt`](https://gfilho.net/.well-known/security.txt)). Please do not open public issues for them.
 
-## 10. Licenses
+## 11. Licenses
 
 | Content | License |
 |---|---|
-| Code and configuration: HTML structure, CSS, JavaScript, everything under `deploy/` and `tools/`, and the diagrams under `docs/` | [MIT License](LICENSE) |
+| Code and configuration: HTML structure, CSS, JavaScript, everything under `deploy/`, `monitoring/` and `tools/`, and the diagrams under `docs/` | [MIT License](LICENSE) |
 | Personal content: text, profile photo, logo and `og-image.png` | © Guilherme Filho, all rights reserved |
 | Fonts: [Newsreader](https://github.com/productiontype/Newsreader) and [Hanken Grotesk](https://github.com/marcologous/hanken-grotesk) | SIL Open Font License 1.1 (`site/assets/fonts/OFL-*.txt`) |
 | Icons: based on [Lucide](https://lucide.dev/) | ISC License (`site/assets/LICENSE-lucide.txt`) |

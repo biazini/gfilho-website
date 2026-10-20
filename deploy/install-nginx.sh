@@ -11,6 +11,7 @@ mkdir -p "$backup"
 cp -a /etc/nginx/sites-available "$backup/"
 cp -a /etc/nginx/sites-enabled "$backup/"
 cp -a /etc/nginx/snippets "$backup/"
+[ -d /etc/systemd/system/nginx.service.d ] && cp -a /etc/systemd/system/nginx.service.d "$backup/"
 chmod -R go-rwx /var/backups/gfilho
 echo "backup:  $backup"
 
@@ -30,6 +31,11 @@ rm -f /etc/nginx/sites-enabled/default
 mkdir -p /var/www/gfilho-staging
 
 nginx -t || rollback
+
+# restart nginx automatically if it ever dies (the stock unit has no Restart= policy)
+install -D -m 644 "$here/../systemd/nginx-restart.conf" /etc/systemd/system/nginx.service.d/restart.conf
+systemctl daemon-reload
+
 systemctl reload nginx
 sleep 1
 # A reload cannot move an existing wildcard socket (0.0.0.0:8088) to loopback-only: nginx logs

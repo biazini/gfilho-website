@@ -1,0 +1,11 @@
+# Installed to /etc/systemd/system/ by monitoring/install-monitoring.sh
+[Unit]
+Description=Refresh the gfilho.net custom metrics every 2 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

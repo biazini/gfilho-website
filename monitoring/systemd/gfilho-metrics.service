@@ -1,0 +1,17 @@
+# Installed to /etc/systemd/system/ by monitoring/install-monitoring.sh
+[Unit]
+Description=gfilho.net custom metrics for the Grafana dashboard (node_exporter textfile)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/gfilho-metrics
+Nice=10
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
