@@ -263,12 +263,12 @@ The dashboard has seven sections:
 
 | Section | What it shows |
 |---|---|
-| Overview | Site and origin up/down, tunnel connections, latency, availability, alerts, page views and data served; TLS and security.txt expiry, last deploy, WSL uptime and downtime, pending updates |
-| Active alerts | Firing alerts with severity, component and the time they became active |
-| Availability & latency | A timeline of every check (public pages, origin, staging, redirects, DNS) and response times by phase |
-| Traffic · production | Responses by status class, requests per second, top pages, top 404s, top referrers, humans vs bots, bytes served |
-| Tunnel & web server | Edge connections, tunnel responses and errors, QUIC latency, nginx connections, edge locations |
-| Host · WSL | systemd services and restarts, CPU, memory, disk, network, published files, backups, installed versions |
+| Overview | Two borderless status strips (Health: site, origin, tunnel, latency, availability, alerts, page views, data served · Lifecycle: TLS and security.txt expiry, last deploy, WSL uptime and downtime, updates, reboot) and one continuous **Uptime** line with every check |
+| Alerts | Grafana's native alert list (firing and pending Prometheus rules) and an alert history timeline |
+| Latency | Response time by phase and public vs origin, as smooth areas |
+| Traffic · production | Responses by status class, requests per second, top pages / 404s / referrers as bar charts, humans vs bots, status mix, bytes served |
+| Tunnel & web server | Tunnel traffic with its error rates, the edge link (connections with QUIC latency on a second axis), nginx connections, edge locations and versions as chips |
+| Host · WSL | Services as a status-history grid, automatic restarts, CPU & disk, memory, network, publishing strip |
 | Logs (collapsed) | nginx errors, service warnings and recent requests |
 
 Deploys and WSL starts are marked on the charts. A page view is a request to `/` or `/cases/*/` answered `200` (or `304` from the browser cache), without the monitoring probes (User-Agent `gfilho-monitor`), automated tools or local previews. The logs do not record visitor IP addresses, so there are no "unique visitor" figures.

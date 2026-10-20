@@ -6,7 +6,7 @@ ENV = sys.argv[1] if len(sys.argv) > 1 else "production"
 dash = json.load(open("/opt/gfilho-monitoring/grafana/dashboards/gfilho.json", encoding="utf-8"))
 now = int(time.time() * 1000)
 FROM = now - 24 * 3600 * 1000
-EXPECT_EMPTY = {("Alert details", "A"), ("Status mix", "D")}   # no firing alert and no 5xx are the healthy state
+EXPECT_EMPTY = {("Alert history", "A"), ("Status mix", "D")}   # no firing alert and no 5xx are the healthy state
 
 def panels(ps):
     for p in ps:
