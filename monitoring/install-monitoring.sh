@@ -18,7 +18,7 @@ curl -fsS -o /dev/null http://127.0.0.1:8090/stub_status \
 # 1. configuration
 install -d -m 755 "$dest"
 rsync -a --delete --chmod=D755,F644 \
-  --exclude 'install-monitoring.sh' --exclude 'systemd/' --exclude 'textfile/' \
+  --exclude 'install-monitoring.sh' --exclude 'systemd/' --exclude 'textfile/' --exclude 'tests/' \
   "$here/" "$dest/"
 echo "config:  $here -> $dest"
 

@@ -1,5 +1,5 @@
 # Alert rules for gfilho.net. There is no Alertmanager: firing alerts are shown on the Grafana
-# dashboard ("Alertas ativos"). For notifications when the whole PC is off, use an external
+# dashboard ("Active alerts"). For notifications while the whole PC is off, use an external
 # uptime monitor as well (see README, "Monitoring").
 groups:
   - name: gfilho-site
@@ -7,79 +7,79 @@ groups:
       - alert: SiteDown
         expr: probe_success{job="blackbox_public"} == 0
         for: 2m
-        labels: { severity: critical, componente: site }
-        annotations: { summary: "Página pública sem resposta 200: {{ $labels.instance }}" }
+        labels: { severity: critical, component: site }
+        annotations: { summary: "Public page not answering 200: {{ $labels.instance }}" }
 
       - alert: OriginDown
         expr: probe_success{job="blackbox_origin", instance="http://127.0.0.1:8088/"} == 0
         for: 1m
-        labels: { severity: critical, componente: nginx }
-        annotations: { summary: "nginx de produção (127.0.0.1:8088) não responde" }
+        labels: { severity: critical, component: nginx }
+        annotations: { summary: "Production nginx (127.0.0.1:8088) is not answering" }
 
       - alert: StagingDown
         expr: probe_success{job="blackbox_origin", instance="http://127.0.0.1:8089/"} == 0
         for: 5m
-        labels: { severity: warning, componente: nginx }
-        annotations: { summary: "nginx de staging (127.0.0.1:8089) não responde" }
+        labels: { severity: warning, component: nginx }
+        annotations: { summary: "Staging nginx (127.0.0.1:8089) is not answering" }
 
       - alert: RedirectBroken
         expr: probe_success{job="blackbox_redirects"} == 0
         for: 10m
-        labels: { severity: warning, componente: site }
-        annotations: { summary: "Redirecionamento 301 em falta: {{ $labels.instance }}" }
+        labels: { severity: warning, component: site }
+        annotations: { summary: "301 redirect missing: {{ $labels.instance }}" }
 
       - alert: DnsResolutionFailing
         expr: probe_success{job="blackbox_dns"} == 0
         for: 10m
-        labels: { severity: warning, componente: dns }
-        annotations: { summary: "gfilho.net não resolve em {{ $labels.instance }}" }
+        labels: { severity: warning, component: dns }
+        annotations: { summary: "gfilho.net does not resolve via {{ $labels.instance }}" }
 
       - alert: TlsCertificateExpiringSoon
         expr: (probe_ssl_earliest_cert_expiry{instance="https://gfilho.net/"} - time()) / 86400 < 14
         for: 1h
-        labels: { severity: warning, componente: tls }
-        annotations: { summary: "Certificado TLS expira em menos de 14 dias" }
+        labels: { severity: warning, component: tls }
+        annotations: { summary: "TLS certificate expires in less than 14 days" }
 
       - alert: SecurityTxtExpiringSoon
         expr: (gfilho_security_txt_expires_timestamp_seconds - time()) / 86400 < 30
         for: 1h
-        labels: { severity: warning, componente: site }
-        annotations: { summary: "security.txt expira em menos de 30 dias" }
+        labels: { severity: warning, component: site }
+        annotations: { summary: "security.txt expires in less than 30 days" }
 
   - name: gfilho-services
     rules:
       - alert: TunnelDown
         expr: up{job="cloudflared"} == 0 or cloudflared_tunnel_ha_connections == 0
         for: 1m
-        labels: { severity: critical, componente: tunnel }
-        annotations: { summary: "Túnel Cloudflare sem ligações" }
+        labels: { severity: critical, component: tunnel }
+        annotations: { summary: "Cloudflare Tunnel has no edge connections" }
 
       - alert: TunnelDegraded
         expr: cloudflared_tunnel_ha_connections < 2
         for: 5m
-        labels: { severity: warning, componente: tunnel }
-        annotations: { summary: "Túnel com menos de 2 ligações ao edge" }
+        labels: { severity: warning, component: tunnel }
+        annotations: { summary: "Tunnel has fewer than 2 edge connections" }
 
       - alert: NginxExporterDown
         expr: nginx_up == 0
         for: 2m
-        labels: { severity: warning, componente: nginx }
-        annotations: { summary: "stub_status do nginx não responde" }
+        labels: { severity: warning, component: nginx }
+        annotations: { summary: "nginx stub_status is not answering" }
 
       - alert: SystemdUnitFailed
         expr: node_systemd_unit_state{state="failed"} == 1
         for: 5m
-        labels: { severity: warning, componente: systemd }
-        annotations: { summary: "Unidade systemd em falha: {{ $labels.name }}" }
+        labels: { severity: warning, component: systemd }
+        annotations: { summary: "systemd unit failed: {{ $labels.name }}" }
 
       - alert: DiskAlmostFull
         expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.10
         for: 15m
-        labels: { severity: warning, componente: host }
-        annotations: { summary: "Disco do WSL com menos de 10 % livre" }
+        labels: { severity: warning, component: host }
+        annotations: { summary: "WSL disk has less than 10 % free" }
 
       - alert: SecurityUpdatesPending
         expr: gfilho_apt_upgradable{kind="security"} > 0
         for: 3d
-        labels: { severity: info, componente: host }
-        annotations: { summary: "Atualizações de segurança pendentes há mais de 3 dias" }
+        labels: { severity: info, component: host }
+        annotations: { summary: "Security updates pending for more than 3 days" }

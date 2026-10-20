@@ -1,15 +1,16 @@
 {
   "uid": "gfilho-overview",
-  "title": "gfilho.net — Monitorização",
-  "description": "Disponibilidade, tráfego, túnel, serviços e máquina do site gfilho.net",
+  "title": "gfilho.net — Monitoring",
+  "description": "Availability, traffic, tunnel, services and host of gfilho.net",
   "tags": [
-    "gfilho.net"
+    "gfilho.net",
+    "website"
   ],
   "timezone": "browser",
   "editable": false,
   "graphTooltip": 1,
   "schemaVersion": 41,
-  "version": 1,
+  "version": 2,
   "time": {
     "from": "now-24h",
     "to": "now"
@@ -22,36 +23,83 @@
       "30s",
       "1m",
       "5m",
-      "15m"
+      "15m",
+      "1h"
     ]
   },
   "templating": {
     "list": []
   },
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "enable": true,
+        "iconColor": "#5794F2",
+        "name": "Deploys",
+        "expr": "changes(gfilho_last_deploy_timestamp_seconds{target=\"production\"}[3m]) > 0",
+        "step": "1m",
+        "titleFormat": "Deploy to production",
+        "textFormat": "deploy.sh production"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "enable": true,
+        "iconColor": "#FF9830",
+        "name": "WSL starts",
+        "expr": "changes(node_boot_time_seconds[3m]) > 0",
+        "step": "1m",
+        "titleFormat": "WSL started",
+        "textFormat": "The site was offline before this point"
+      }
+    ]
   },
   "links": [
     {
-      "title": "gfilho.net",
+      "title": "Live site",
       "url": "https://gfilho.net/",
       "type": "link",
       "targetBlank": true,
       "icon": "external link"
     },
     {
-      "title": "Prometheus",
+      "title": "Prometheus alerts",
       "url": "http://localhost:9091/alerts",
       "type": "link",
       "targetBlank": true,
-      "icon": "external link"
+      "icon": "bolt"
+    },
+    {
+      "title": "Repository",
+      "url": "https://github.com/biazini/gfilho-website",
+      "type": "link",
+      "targetBlank": true,
+      "icon": "doc"
     }
   ],
   "panels": [
     {
       "id": 1,
       "type": "row",
-      "title": "Estado agora",
+      "title": "Overview",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -64,12 +112,12 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Site público",
-      "description": "https://gfilho.net/ pedido de fora (DNS → Cloudflare → túnel → nginx), com verificação do conteúdo. A cada 60 s.",
+      "title": "Site",
+      "description": "https://gfilho.net/ requested from outside every 60 s: DNS → Cloudflare → tunnel → nginx, with a content check.",
       "gridPos": {
         "x": 0,
         "y": 1,
-        "w": 4,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -85,7 +133,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "probe_success{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}",
+          "expr": "min(probe_success{job=\"blackbox_public\", instance=\"https://gfilho.net/\"})",
           "legendFormat": ""
         }
       ],
@@ -97,13 +145,13 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "OFFLINE",
-                  "color": "red",
+                  "text": "DOWN",
+                  "color": "#F2495C",
                   "index": 0
                 },
                 "1": {
-                  "text": "ONLINE",
-                  "color": "green",
+                  "text": "UP",
+                  "color": "#73BF69",
                   "index": 1
                 }
               }
@@ -113,16 +161,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#F2495C",
                 "value": null
               },
               {
-                "color": "green",
+                "color": "#73BF69",
                 "value": 1
               }
             ]
           },
-          "noValue": "sem dados",
+          "noValue": "no data",
           "color": {
             "mode": "thresholds"
           }
@@ -149,12 +197,12 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Origem (nginx :8088)",
-      "description": "nginx de produção pedido diretamente, sem Cloudflare nem túnel.",
+      "title": "Origin",
+      "description": "Production nginx (127.0.0.1:8088) requested directly, without Cloudflare or the tunnel.",
       "gridPos": {
-        "x": 4,
+        "x": 3,
         "y": 1,
-        "w": 4,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -170,7 +218,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "probe_success{job=\"blackbox_origin\", instance=\"http://127.0.0.1:8088/\"}",
+          "expr": "min(probe_success{job=\"blackbox_origin\", instance=\"http://127.0.0.1:8088/\"})",
           "legendFormat": ""
         }
       ],
@@ -182,13 +230,13 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "OFFLINE",
-                  "color": "red",
+                  "text": "DOWN",
+                  "color": "#F2495C",
                   "index": 0
                 },
                 "1": {
-                  "text": "ONLINE",
-                  "color": "green",
+                  "text": "UP",
+                  "color": "#73BF69",
                   "index": 1
                 }
               }
@@ -198,16 +246,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#F2495C",
                 "value": null
               },
               {
-                "color": "green",
+                "color": "#73BF69",
                 "value": 1
               }
             ]
           },
-          "noValue": "sem dados",
+          "noValue": "no data",
           "color": {
             "mode": "thresholds"
           }
@@ -234,12 +282,12 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Túnel (ligações)",
-      "description": "Ligações ativas do cloudflared à Cloudflare. Normal: 4. Com 0 o site fica offline.",
+      "title": "Tunnel",
+      "description": "Active connections from cloudflared to the Cloudflare edge. Normal: 4. With 0 the site is offline.",
       "gridPos": {
-        "x": 8,
+        "x": 6,
         "y": 1,
-        "w": 4,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -249,8 +297,8 @@
       "targets": [
         {
           "refId": "A",
-          "instant": true,
-          "range": false,
+          "range": true,
+          "instant": false,
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -267,19 +315,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#F2495C",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#FF9830",
                 "value": 1
               },
               {
-                "color": "yellow",
-                "value": 2
-              },
-              {
-                "color": "green",
+                "color": "#73BF69",
                 "value": 4
               }
             ]
@@ -300,7 +344,7 @@
           "values": false
         },
         "colorMode": "background",
-        "graphMode": "none",
+        "graphMode": "area",
         "textMode": "value",
         "justifyMode": "center",
         "orientation": "auto",
@@ -311,12 +355,12 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Resposta pública",
-      "description": "Duração total do último pedido de fora a https://gfilho.net/.",
+      "title": "Latency",
+      "description": "Total time of the latest public request to https://gfilho.net/, as seen from outside.",
       "gridPos": {
-        "x": 12,
+        "x": 9,
         "y": 1,
-        "w": 4,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -326,34 +370,34 @@
       "targets": [
         {
           "refId": "A",
-          "instant": true,
-          "range": false,
+          "range": true,
+          "instant": false,
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "probe_duration_seconds{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}",
+          "expr": "max(probe_duration_seconds{job=\"blackbox_public\", instance=\"https://gfilho.net/\"})",
           "legendFormat": ""
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "decimals": 2,
+          "decimals": 0,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#73BF69",
                 "value": null
               },
               {
-                "color": "yellow",
+                "color": "#FF9830",
                 "value": 0.6
               },
               {
-                "color": "red",
+                "color": "#F2495C",
                 "value": 1.5
               }
             ]
@@ -372,8 +416,8 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "background",
-        "graphMode": "none",
+        "colorMode": "value",
+        "graphMode": "area",
         "textMode": "value",
         "justifyMode": "center",
         "orientation": "auto",
@@ -384,12 +428,12 @@
     {
       "id": 6,
       "type": "stat",
-      "title": "Certificado TLS",
-      "description": "Certificado servido pela Cloudflare (renovado automaticamente). Alerta abaixo de 14 dias.",
+      "title": "Availability",
+      "description": "Share of successful public checks in the selected time range. Only counts while monitoring runs: with the PC or WSL off there are no measurements (see \"Offline 24 h\").",
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 1,
-        "w": 4,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -405,28 +449,29 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "probe_ssl_earliest_cert_expiry{instance=\"https://gfilho.net/\"} - time()",
+          "expr": "sum(sum_over_time(probe_success{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}[$__range])) / sum(count_over_time(probe_success{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}[$__range]))",
           "legendFormat": ""
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "dtdurations",
+          "unit": "percentunit",
+          "decimals": 2,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "#F2495C",
                 "value": null
               },
               {
-                "color": "orange",
-                "value": 1209600
+                "color": "#FF9830",
+                "value": 0.95
               },
               {
-                "color": "green",
-                "value": 2592000
+                "color": "#73BF69",
+                "value": 0.995
               }
             ]
           },
@@ -456,12 +501,12 @@
     {
       "id": 7,
       "type": "stat",
-      "title": "Alertas ativos",
-      "description": "Regras em monitoring/prometheus/rules.yml. Detalhe na tabela abaixo.",
+      "title": "Alerts",
+      "description": "Firing alert rules (monitoring/prometheus/rules.yml). Details in the table below.",
       "gridPos": {
-        "x": 20,
+        "x": 15,
         "y": 1,
-        "w": 4,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -489,11 +534,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#73BF69",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#F2495C",
                 "value": 1
               }
             ]
@@ -524,296 +569,12 @@
     {
       "id": 8,
       "type": "stat",
-      "title": "Disponibilidade",
-      "description": "Percentagem de verificações bem-sucedidas no intervalo escolhido. Só conta enquanto a monitorização está a correr: com o PC ou o WSL desligados não há medições (ver \"WSL offline\").",
+      "title": "Page views",
+      "description": "Requests to the pages (/ and /cases/*) answered 200, or 304 from the browser cache, in the selected range, without monitoring probes, automated tools or local previews. Logs keep no visitor IP, so there are no \"unique visitors\".",
       "gridPos": {
-        "x": 0,
-        "y": 5,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "avg_over_time(probe_success{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}[$__range])",
-          "legendFormat": ""
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "decimals": 2,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.95
-              },
-              {
-                "color": "green",
-                "value": 0.995
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "value",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 9,
-      "type": "stat",
-      "title": "WSL offline",
-      "description": "Tempo sem o WSL a correr nas últimas 24 h e 7 dias, calculado a partir do journal. Durante esse tempo o site esteve offline.",
-      "gridPos": {
-        "x": 4,
-        "y": 5,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "gfilho_wsl_offline_seconds{window=\"24h\"}",
-          "legendFormat": "24 h"
-        },
-        {
-          "refId": "B",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "gfilho_wsl_offline_seconds{window=\"7d\"}",
-          "legendFormat": "7 dias"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "dtdurations",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 600
-              },
-              {
-                "color": "red",
-                "value": 3600
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "value_and_name",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 10,
-      "type": "stat",
-      "title": "WSL ligado há",
-      "description": "Tempo desde o último arranque do WSL.",
-      "gridPos": {
-        "x": 8,
-        "y": 5,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "time() - node_boot_time_seconds",
-          "legendFormat": ""
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "dtdurations",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "value",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 11,
-      "type": "stat",
-      "title": "Último deploy",
-      "description": "Tempo desde o último deploy.sh production (snapshot em /var/backups/gfilho).",
-      "gridPos": {
-        "x": 12,
-        "y": 5,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "time() - gfilho_last_deploy_timestamp_seconds{target=\"production\"}",
-          "legendFormat": ""
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "dtdurations",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "value",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 12,
-      "type": "stat",
-      "title": "Páginas vistas",
-      "description": "Pedidos 200 às páginas (/, /cases/*) no período, sem a monitorização nem ferramentas automáticas. Os logs não guardam o IP do visitante, por isso não há \"visitantes únicos\".",
-      "gridPos": {
-        "x": 16,
-        "y": 5,
-        "w": 4,
+        "x": 18,
+        "y": 1,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -825,13 +586,13 @@
           "refId": "A",
           "instant": true,
           "range": false,
+          "queryType": "instant",
           "datasource": {
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=\"200\" | path =~ `^/(cases/[a-z0-9-]+/)?(\\?.*)?$` [$__range]))",
-          "legendFormat": "",
-          "queryType": "instant"
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path =~ `^/(cases/[a-z0-9-]+/)?$` [$__range]))",
+          "legendFormat": ""
         }
       ],
       "fieldConfig": {
@@ -842,7 +603,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "#8AB8FF",
                 "value": null
               }
             ]
@@ -872,14 +633,496 @@
       }
     },
     {
+      "id": 9,
+      "type": "stat",
+      "title": "Data served",
+      "description": "Bytes sent to visitors in the selected range (same filters as Page views).",
+      "gridPos": {
+        "x": 21,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(sum_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__range]))",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8AB8FF",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "0 B",
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "TLS cert",
+      "description": "Time left on the certificate Cloudflare serves (renewed automatically). Alert under 14 days.",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(probe_ssl_earliest_cert_expiry{instance=\"https://gfilho.net/\"}) - time()",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 1209600
+              },
+              {
+                "color": "#73BF69",
+                "value": 2592000
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "security.txt",
+      "description": "Time left until the Expires date of /.well-known/security.txt. Renew it before 30 days.",
+      "gridPos": {
+        "x": 3,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "gfilho_security_txt_expires_timestamp_seconds - time()",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 2592000
+              },
+              {
+                "color": "#73BF69",
+                "value": 5184000
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Last deploy",
+      "description": "Time since the latest deploy.sh production (from its backup snapshot).",
+      "gridPos": {
+        "x": 6,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "time() - gfilho_last_deploy_timestamp_seconds{target=\"production\"}",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8AB8FF",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
       "id": 13,
       "type": "stat",
-      "title": "Updates de segurança",
-      "description": "Pacotes do Ubuntu com atualização de segurança (cache APT local). Instalam-se sozinhas pelo unattended-upgrades quando o WSL está ligado.",
+      "title": "WSL uptime",
+      "description": "Time since WSL last started. The site only runs while WSL runs.",
       "gridPos": {
-        "x": 20,
+        "x": 9,
         "y": 5,
-        "w": 4,
+        "w": 3,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "time() - node_boot_time_seconds",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8AB8FF",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Offline 24 h",
+      "description": "Time WSL was not running in the last 24 hours, from the systemd journal. The site was offline during that time.",
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "gfilho_wsl_offline_seconds{window=\"24h\"}",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 600
+              },
+              {
+                "color": "#F2495C",
+                "value": 3600
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Offline 7 d",
+      "description": "Time WSL was not running in the last 7 days, from the systemd journal.",
+      "gridPos": {
+        "x": 15,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "gfilho_wsl_offline_seconds{window=\"7d\"}",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 3600
+              },
+              {
+                "color": "#F2495C",
+                "value": 21600
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Updates",
+      "description": "Ubuntu packages with a pending security update (local APT cache). unattended-upgrades installs them while WSL is running.",
+      "gridPos": {
+        "x": 18,
+        "y": 5,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -907,15 +1150,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#73BF69",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#FF9830",
                 "value": 1
               },
               {
-                "color": "red",
+                "color": "#F2495C",
                 "value": 10
               }
             ]
@@ -944,2192 +1187,14 @@
       }
     },
     {
-      "id": 14,
-      "type": "row",
-      "title": "Alertas",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 9,
-        "w": 24,
-        "h": 1
-      },
-      "panels": []
-    },
-    {
-      "id": 15,
-      "type": "table",
-      "title": "Alertas ativos",
-      "description": "Alertas a disparar neste momento. Sem linhas (\"No data\") = nenhum alerta ativo.",
-      "gridPos": {
-        "x": 0,
-        "y": 10,
-        "w": 16,
-        "h": 6
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "ALERTS{alertstate=\"firing\"}",
-          "legendFormat": ""
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": true,
-              "__name__": true,
-              "instance": true,
-              "job": true,
-              "alertstate": true
-            },
-            "renameByName": {
-              "alertname": "Alerta",
-              "severity": "Severidade",
-              "componente": "Componente"
-            }
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false
-        }
-      }
-    },
-    {
-      "id": 16,
-      "type": "text",
-      "title": "Como ler este painel",
-      "gridPos": {
-        "x": 16,
-        "y": 10,
-        "w": 8,
-        "h": 6
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "**Verde** em cima = tudo bem. Se o **site público** falha mas a **origem** responde, o problema está na Cloudflare ou no túnel; se falham os dois, está no nginx ou no WSL.\n\nQuando o PC ou o WSL estão desligados, **não há medições** (as linhas interrompem-se) e nada consegue avisar a partir daqui: para isso é preciso um monitor externo (ver README, secção *Monitoring*)."
-      }
-    },
-    {
       "id": 17,
-      "type": "row",
-      "title": "Disponibilidade e latência",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 16,
-        "w": 24,
-        "h": 1
-      },
-      "panels": []
-    },
-    {
-      "id": 18,
-      "type": "state-timeline",
-      "title": "Verificações por alvo",
-      "description": "Verde = ok, vermelho = falha. Públicas (60 s), origem e staging (30 s), redirecionamentos 301 e DNS (5 min). Espaços em branco = monitorização parada.",
-      "gridPos": {
-        "x": 0,
-        "y": 17,
-        "w": 24,
-        "h": 9
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "probe_success",
-          "legendFormat": "{{job}} · {{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "falha",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "ok",
-                  "color": "green",
-                  "index": 1
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "never",
-        "rowHeight": 0.8,
-        "mergeValues": true,
-        "alignValue": "left",
-        "legend": {
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      }
-    },
-    {
-      "id": 19,
-      "type": "timeseries",
-      "title": "Tempo de resposta público por fase",
-      "description": "Onde se gasta o tempo de um pedido a https://gfilho.net/: DNS, ligação, TLS, processamento (edge → túnel → nginx) e transferência.",
-      "gridPos": {
-        "x": 0,
-        "y": 26,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (phase) (probe_http_duration_seconds{job=\"blackbox_public\", instance=\"https://gfilho.net/\"})",
-          "legendFormat": "{{phase}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 40,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 20,
-      "type": "timeseries",
-      "title": "Público vs origem",
-      "description": "Tempo total de fora (via Cloudflare e túnel) comparado com o nginx diretamente. A diferença é o percurso pela Internet.",
-      "gridPos": {
-        "x": 12,
-        "y": 26,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "probe_duration_seconds{job=\"blackbox_public\"}",
-          "legendFormat": "público {{instance}}"
-        },
-        {
-          "refId": "B",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "probe_duration_seconds{job=\"blackbox_origin\"}",
-          "legendFormat": "origem {{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 21,
-      "type": "row",
-      "title": "Tráfego",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 34,
-        "w": 24,
-        "h": 1
-      },
-      "panels": []
-    },
-    {
-      "id": 22,
-      "type": "timeseries",
-      "title": "Respostas por código HTTP (produção)",
-      "description": "Pedidos de visitantes por código de resposta (log do nginx). Picos de 404 costumam ser bots à procura de ficheiros.",
-      "gridPos": {
-        "x": 0,
-        "y": 35,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "sum by (status) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` [$__auto]))",
-          "legendFormat": "{{status}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 2,
-            "fillOpacity": 80,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 23,
-      "type": "timeseries",
-      "title": "Pedidos por segundo",
-      "description": "Todos os pedidos ao nginx (inclui staging e monitorização) e os que chegam pelo túnel.",
-      "gridPos": {
-        "x": 12,
-        "y": 35,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate(nginx_http_requests_total[$__rate_interval])",
-          "legendFormat": "nginx (todos)"
-        },
-        {
-          "refId": "B",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate(cloudflared_tunnel_total_requests[$__rate_interval])",
-          "legendFormat": "pelo túnel (Internet)"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 24,
-      "type": "bargauge",
-      "title": "Páginas mais vistas",
-      "description": "Top 10 de páginas com resposta 200 no período (sem CSS, JS, imagens e ficheiros técnicos).",
-      "gridPos": {
-        "x": 0,
-        "y": 43,
-        "w": 6,
-        "h": 10
-      },
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "queryType": "instant",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "topk(10, sum by (path) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=\"200\" | path !~ `^/(assets|cdn-cgi)/.*` | path !~ `.*\\.(png|ico|svg|xml|txt|webmanifest|jpg|woff2|js|css|map)(\\?.*)?$` [$__range])))",
-          "legendFormat": "{{path}}"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "field": "Value #A",
-                "desc": true
-              }
-            ]
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "sem pedidos no período"
-        },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "basic",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "top",
-        "sizing": "auto",
-        "minVizHeight": 16,
-        "maxVizHeight": 24,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/^Value/",
-          "values": true,
-          "limit": 10
-        }
-      }
-    },
-    {
-      "id": 25,
-      "type": "bargauge",
-      "title": "404 mais frequentes",
-      "description": "Caminhos pedidos que não existem. Normalmente bots à procura de WordPress, .env, etc.: são inofensivos porque nada disso existe aqui.",
-      "gridPos": {
-        "x": 6,
-        "y": 43,
-        "w": 6,
-        "h": 10
-      },
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "queryType": "instant",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "topk(10, sum by (path) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=\"404\" [$__range])))",
-          "legendFormat": "{{path}}"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "field": "Value #A",
-                "desc": true
-              }
-            ]
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "orange",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "sem pedidos no período"
-        },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "basic",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "top",
-        "sizing": "auto",
-        "minVizHeight": 16,
-        "maxVizHeight": 24,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/^Value/",
-          "values": true,
-          "limit": 10
-        }
-      }
-    },
-    {
-      "id": 26,
-      "type": "bargauge",
-      "title": "De onde vêm as visitas",
-      "description": "Referrer das páginas vistas (sem links internos do próprio site).",
-      "gridPos": {
-        "x": 12,
-        "y": 43,
-        "w": 6,
-        "h": 10
-      },
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "queryType": "instant",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "topk(10, sum by (referer) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | path =~ `^/(cases/[a-z0-9-]+/)?(\\?.*)?$` | referer != \"-\" | referer !~ `https?://(www\\.)?gfilho\\.net.*` [$__range])))",
-          "legendFormat": "{{referer}}"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "field": "Value #A",
-                "desc": true
-              }
-            ]
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "purple",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "sem pedidos no período"
-        },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "basic",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "top",
-        "sizing": "auto",
-        "minVizHeight": 16,
-        "maxVizHeight": 24,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/^Value/",
-          "values": true,
-          "limit": 10
-        }
-      }
-    },
-    {
-      "id": 27,
-      "type": "bargauge",
-      "title": "Pessoas vs bots",
-      "description": "Pedidos às páginas por tipo de cliente, a partir do User-Agent.",
-      "gridPos": {
-        "x": 18,
-        "y": 43,
-        "w": 6,
-        "h": 10
-      },
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "queryType": "instant",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | path =~ `^/(cases/[a-z0-9-]+/)?(\\?.*)?$` | agent !~ `(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan).*` [$__range]))",
-          "legendFormat": "Browsers"
-        },
-        {
-          "refId": "B",
-          "queryType": "instant",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | path =~ `^/(cases/[a-z0-9-]+/)?(\\?.*)?$` | agent =~ `(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan).*` [$__range]))",
-          "legendFormat": "Bots e crawlers"
-        }
-      ],
-      "transformations": [],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "sem pedidos no período"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Browsers"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Bots e crawlers"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "basic",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "top",
-        "sizing": "auto",
-        "minVizHeight": 16,
-        "maxVizHeight": 24,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false,
-          "limit": 10
-        }
-      }
-    },
-    {
-      "id": 28,
-      "type": "timeseries",
-      "title": "Ligações do nginx",
-      "description": "Ligações abertas no nginx (stub_status).",
-      "gridPos": {
-        "x": 0,
-        "y": 53,
-        "w": 12,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "nginx_connections_active",
-          "legendFormat": "ativas"
-        },
-        {
-          "refId": "B",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "nginx_connections_reading",
-          "legendFormat": "a ler"
-        },
-        {
-          "refId": "C",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "nginx_connections_writing",
-          "legendFormat": "a escrever"
-        },
-        {
-          "refId": "D",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "nginx_connections_waiting",
-          "legendFormat": "keep-alive"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 29,
-      "type": "timeseries",
-      "title": "Tráfego servido a visitantes",
-      "description": "Bytes enviados pelo nginx aos visitantes (log de produção, sem a monitorização). O nginx responde em menos de 1 ms, por isso o tempo que conta é o público, mais acima.",
-      "gridPos": {
-        "x": 12,
-        "y": 53,
-        "w": 12,
-        "h": 7
-      },
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "sum(sum_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__auto]))",
-          "legendFormat": "bytes"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "decbytes",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 2,
-            "fillOpacity": 80,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 30,
-      "type": "row",
-      "title": "Túnel Cloudflare",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 60,
-        "w": 24,
-        "h": 1
-      },
-      "panels": []
-    },
-    {
-      "id": 31,
-      "type": "timeseries",
-      "title": "Ligações ao edge",
-      "description": "Ligações ativas do túnel (normal 4) e registos de novas ligações. Muitos registos = reconexões frequentes.",
-      "gridPos": {
-        "x": 0,
-        "y": 61,
-        "w": 8,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "cloudflared_tunnel_ha_connections",
-          "legendFormat": "ligações ativas"
-        },
-        {
-          "refId": "B",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "increase(cloudflared_tunnel_tunnel_register_success[$__rate_interval])",
-          "legendFormat": "novos registos"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "decimals": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 32,
-      "type": "timeseries",
-      "title": "Erros do túnel",
-      "description": "Pedidos que o cloudflared não conseguiu entregar ao nginx e erros de streams.",
-      "gridPos": {
-        "x": 8,
-        "y": 61,
-        "w": 8,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate(cloudflared_tunnel_request_errors[$__rate_interval])",
-          "legendFormat": "erros de pedido"
-        },
-        {
-          "refId": "B",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate(cloudflared_proxy_connect_streams_errors[$__rate_interval])",
-          "legendFormat": "erros de stream"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 33,
-      "type": "timeseries",
-      "title": "Respostas do túnel por código",
-      "description": "Códigos HTTP devolvidos pela origem através do túnel.",
-      "gridPos": {
-        "x": 16,
-        "y": 61,
-        "w": 8,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (status_code) (rate(cloudflared_tunnel_response_by_code[$__rate_interval]))",
-          "legendFormat": "{{status_code}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 34,
-      "type": "timeseries",
-      "title": "Latência até à Cloudflare (QUIC)",
-      "description": "RTT suavizado de cada ligação do túnel ao edge.",
-      "gridPos": {
-        "x": 0,
-        "y": 68,
-        "w": 12,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "quic_client_smoothed_rtt",
-          "legendFormat": "ligação {{conn_index}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 35,
-      "type": "table",
-      "title": "Edge e ligações",
-      "description": "Centros de dados da Cloudflare a que o túnel está ligado.",
-      "gridPos": {
-        "x": 12,
-        "y": 68,
-        "w": 6,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "cloudflared_tunnel_server_locations",
-          "legendFormat": ""
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": true,
-              "__name__": true,
-              "instance": true,
-              "job": true
-            },
-            "renameByName": {
-              "connection_id": "Ligação",
-              "edge_location": "Edge"
-            }
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false
-        }
-      }
-    },
-    {
-      "id": 36,
-      "type": "table",
-      "title": "Versões instaladas",
-      "description": "Componentes do alojamento (atualizado a cada 2 min).",
-      "gridPos": {
-        "x": 18,
-        "y": 68,
-        "w": 6,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "gfilho_component_info",
-          "legendFormat": ""
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": true,
-              "__name__": true,
-              "instance": true,
-              "job": true
-            },
-            "renameByName": {
-              "component": "Componente",
-              "version": "Versão"
-            }
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false
-        }
-      }
-    },
-    {
-      "id": 37,
-      "type": "row",
-      "title": "Serviços e máquina (WSL)",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 75,
-        "w": 24,
-        "h": 1
-      },
-      "panels": []
-    },
-    {
-      "id": 38,
-      "type": "state-timeline",
-      "title": "Serviços systemd",
-      "description": "Verde = ativo. Inclui o timer das métricas personalizadas.",
-      "gridPos": {
-        "x": 0,
-        "y": 76,
-        "w": 16,
-        "h": 6
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "node_systemd_unit_state{state=\"active\", name=~\"nginx.service|cloudflared.service|docker.service|gfilho-metrics.timer\"}",
-          "legendFormat": "{{name}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "parado",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "ativo",
-                  "color": "green",
-                  "index": 1
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "never",
-        "rowHeight": 0.8,
-        "mergeValues": true,
-        "alignValue": "left",
-        "legend": {
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      }
-    },
-    {
-      "id": 39,
       "type": "stat",
-      "title": "Reinícios automáticos",
-      "description": "Vezes que o systemd reiniciou o serviço (Restart=on-failure) desde o arranque do WSL.",
+      "title": "Reboot",
+      "description": "Some updates (kernel, systemd) only take effect after WSL restarts.",
       "gridPos": {
-        "x": 16,
-        "y": 76,
-        "w": 8,
-        "h": 6
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "node_systemd_service_restart_total{name=\"nginx.service\"}",
-          "legendFormat": "nginx"
-        },
-        {
-          "refId": "B",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "node_systemd_service_restart_total{name=\"cloudflared.service\"}",
-          "legendFormat": "cloudflared"
-        },
-        {
-          "refId": "C",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(node_systemd_unit_state{state=\"failed\"})",
-          "legendFormat": "unidades em falha"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "value_and_name",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 40,
-      "type": "timeseries",
-      "title": "CPU",
-      "description": "Utilização de CPU da VM do WSL (inclui o laboratório Ascender).",
-      "gridPos": {
-        "x": 0,
-        "y": 82,
-        "w": 6,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval]))",
-          "legendFormat": "CPU"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 41,
-      "type": "timeseries",
-      "title": "Memória",
-      "description": "Memória usada e disponível na VM do WSL.",
-      "gridPos": {
-        "x": 6,
-        "y": 82,
-        "w": 6,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
-          "legendFormat": "usada"
-        },
-        {
-          "refId": "B",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "node_memory_MemAvailable_bytes",
-          "legendFormat": "disponível"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 40,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 42,
-      "type": "timeseries",
-      "title": "Disco (/)",
-      "description": "Espaço usado no disco virtual do WSL.",
-      "gridPos": {
-        "x": 12,
-        "y": 82,
-        "w": 6,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "1 - node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}",
-          "legendFormat": "usado"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 43,
-      "type": "timeseries",
-      "title": "Rede",
-      "description": "Tráfego das interfaces físicas (sem loopback, Docker e Kubernetes).",
-      "gridPos": {
-        "x": 18,
-        "y": 82,
-        "w": 6,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*|cni.*|flannel.*|docker.*|br-.*|kube.*\"}[$__rate_interval]))",
-          "legendFormat": "recebido"
-        },
-        {
-          "refId": "B",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|cni.*|flannel.*|docker.*|br-.*|kube.*\"}[$__rate_interval]))",
-          "legendFormat": "enviado"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 44,
-      "type": "stat",
-      "title": "Ficheiros publicados",
-      "description": "Ficheiros na raiz pública (/var/www/html).",
-      "gridPos": {
-        "x": 0,
-        "y": 89,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "gfilho_site_files",
-          "legendFormat": ""
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "value",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 45,
-      "type": "stat",
-      "title": "Tamanho do site",
-      "description": "Tamanho total da raiz pública.",
-      "gridPos": {
-        "x": 4,
-        "y": 89,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "gfilho_site_bytes",
-          "legendFormat": ""
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "value",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 46,
-      "type": "stat",
-      "title": "Snapshots de backup",
-      "description": "Cópias guardadas pelo deploy.sh e pelo install-nginx.sh em /var/backups/gfilho.",
-      "gridPos": {
-        "x": 8,
-        "y": 89,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(gfilho_backup_snapshots)",
-          "legendFormat": ""
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "value",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 47,
-      "type": "stat",
-      "title": "Tamanho dos backups",
-      "description": "Espaço ocupado por /var/backups/gfilho.",
-      "gridPos": {
-        "x": 12,
-        "y": 89,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "gfilho_backup_bytes",
-          "legendFormat": ""
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "value",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 48,
-      "type": "stat",
-      "title": "security.txt expira em",
-      "description": "Campo Expires de /.well-known/security.txt. Renovar antes de chegar a 30 dias.",
-      "gridPos": {
-        "x": 16,
-        "y": 89,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "gfilho_security_txt_expires_timestamp_seconds - time()",
-          "legendFormat": ""
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "dtdurations",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 2592000
-              },
-              {
-                "color": "green",
-                "value": 5184000
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "value",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "wideLayout": true,
-        "showPercentChange": false
-      }
-    },
-    {
-      "id": 49,
-      "type": "stat",
-      "title": "Reinício do WSL necessário",
-      "description": "Algumas atualizações (kernel, systemd) só ficam ativas depois de reiniciar o WSL.",
-      "gridPos": {
-        "x": 20,
-        "y": 89,
-        "w": 4,
+        "x": 21,
+        "y": 5,
+        "w": 3,
         "h": 4
       },
       "datasource": {
@@ -3157,13 +1222,13 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "não",
-                  "color": "green",
+                  "text": "No",
+                  "color": "#73BF69",
                   "index": 0
                 },
                 "1": {
-                  "text": "sim",
-                  "color": "orange",
+                  "text": "Yes",
+                  "color": "#FF9830",
                   "index": 1
                 }
               }
@@ -3173,11 +1238,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#73BF69",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#FF9830",
                 "value": 1
               }
             ]
@@ -3206,27 +1271,699 @@
       }
     },
     {
-      "id": 50,
+      "id": 18,
       "type": "row",
-      "title": "Logs",
+      "title": "Active alerts",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 93,
+        "y": 9,
         "w": 24,
         "h": 1
       },
       "panels": []
     },
     {
-      "id": 51,
-      "type": "logs",
-      "title": "Erros do nginx",
-      "description": "error.log do nginx. \"open() failed\" = pedido a um ficheiro que não existe (404).",
+      "id": 19,
+      "type": "table",
+      "title": "Alert details",
+      "description": "Alerts firing right now, with the time each one became active.",
       "gridPos": {
         "x": 0,
-        "y": 94,
+        "y": 10,
+        "w": 16,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "1000 * (ALERTS_FOR_STATE and ignoring(alertstate) ALERTS{alertstate=\"firing\"})",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "renameByName": {
+              "alertname": "Alert",
+              "severity": "Severity",
+              "component": "Component",
+              "Value": "Active since",
+              "check": "Check"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No active alerts",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Active since"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Severity"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "critical": {
+                        "text": "critical",
+                        "color": "#F2495C",
+                        "index": 0
+                      },
+                      "warning": {
+                        "text": "warning",
+                        "color": "#FF9830",
+                        "index": 1
+                      },
+                      "info": {
+                        "text": "info",
+                        "color": "#5794F2",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "text",
+      "title": "How to read this dashboard",
+      "gridPos": {
+        "x": 16,
+        "y": 10,
+        "w": 8,
+        "h": 6
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Site** down but **Origin** up → Cloudflare or the tunnel. Both down → nginx or WSL.\n\nBlue markers = **deploys** · orange = **WSL starts**.\n\nPC or WSL off = **no data** and no notifications: pair this with an external uptime monitor (README → *Monitoring*)."
+      }
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "Availability & latency",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 22,
+      "type": "state-timeline",
+      "title": "Checks",
+      "description": "Green = OK, red = failing. Public pages every 60 s, origin and staging every 30 s, 301 redirects and DNS every 5 min. Blank = monitoring was not running.",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "probe_success{check!=\"\"}",
+          "legendFormat": "{{check}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Failing",
+                  "color": "#F2495C",
+                  "index": 0
+                },
+                "1": {
+                  "text": "OK",
+                  "color": "#73BF69",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#73BF69",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 75,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "rowHeight": 0.75,
+        "mergeValues": true,
+        "alignValue": "center",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Public response time by phase",
+      "description": "Where the time of a request to https://gfilho.net/ goes: DNS, connect, TLS, processing (edge → tunnel → nginx) and transfer.",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
         "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (phase) (probe_http_duration_seconds{job=\"blackbox_public\", instance=\"https://gfilho.net/\"})",
+          "legendFormat": "{{phase}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 35,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Public vs origin",
+      "description": "Total time from outside (Cloudflare + tunnel) next to nginx answered directly. The difference is the round trip over the internet.",
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "probe_duration_seconds{job=~\"blackbox_public|blackbox_origin\", check!=\"\"}",
+          "legendFormat": "{{check}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "Traffic · production",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Responses by status class",
+      "description": "Visitor requests by HTTP status class (nginx access log). 4xx spikes are usually bots probing for files that do not exist.",
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (class) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | label_format class=`{{ substr 0 1 .status }}xx` [$__auto]))",
+          "legendFormat": "{{class}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 85,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Requests per second",
+      "description": "All requests handled by nginx (including staging and the monitoring probes) and those that came in through the tunnel.",
+      "gridPos": {
+        "x": 12,
+        "y": 35,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(nginx_http_requests_total[$__rate_interval])",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(cloudflared_tunnel_total_requests[$__rate_interval])",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "nginx · all"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tunnel · from the internet"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 28,
+      "type": "table",
+      "title": "Top pages",
+      "description": "The 10 most viewed pages (200 or 304), without CSS, JS, images and technical files.",
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 8,
         "h": 10
       },
       "datasource": {
@@ -3240,94 +1977,2523 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{job=\"nginx\", log=\"error\"}",
-          "queryType": "range"
+          "expr": "topk(10, sum by (path) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path !~ `^/(assets|cdn-cgi)/.*` | path !~ `.*\\.(png|ico|svg|xml|txt|webmanifest|jpg|woff2|js|css|map)$` [$__range])))",
+          "legendFormat": "{{path}}",
+          "queryType": "instant",
+          "instant": true,
+          "range": false
         }
       ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "path": "Page",
+              "Value #A": "Requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No requests in this period",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requests"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
       "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending",
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 29,
+      "type": "table",
+      "title": "Top 404s",
+      "description": "Requested paths that do not exist. Mostly bots looking for WordPress, .env files and similar: harmless here, none of it exists.",
+      "gridPos": {
+        "x": 8,
+        "y": 43,
+        "w": 8,
+        "h": 10
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(10, sum by (path) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=\"404\" [$__range])))",
+          "legendFormat": "{{path}}",
+          "queryType": "instant",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "path": "Path",
+              "Value #A": "Requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No requests in this period",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requests"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 30,
+      "type": "table",
+      "title": "Top referrers",
+      "description": "Where page views came from (links from the site itself are left out).",
+      "gridPos": {
+        "x": 16,
+        "y": 43,
+        "w": 8,
+        "h": 10
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(10, sum by (referer) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path =~ `^/(cases/[a-z0-9-]+/)?$` | referer != \"-\" | referer !~ `https?://(www\\.)?gfilho\\.net.*` [$__range])))",
+          "legendFormat": "{{referer}}",
+          "queryType": "instant",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "referer": "Referrer",
+              "Value #A": "Requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No requests in this period",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requests"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "piechart",
+      "title": "Humans vs bots",
+      "description": "Page views by client type, from the User-Agent.",
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "instant",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path =~ `^/(cases/[a-z0-9-]+/)?$` | agent !~ `(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan|python|go-http|wget).*` [$__range]))",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "queryType": "instant",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path =~ `^/(cases/[a-z0-9-]+/)?$` | agent =~ `(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan|python|go-http|wget).*` [$__range]))",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "No requests in this period"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8E8E8E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Browsers"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Bots & crawlers"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "piechart",
+      "title": "Status mix",
+      "description": "All visitor requests in the selected range by status class.",
+      "gridPos": {
+        "x": 6,
+        "y": 53,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "instant",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"2..\" [$__range]))",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "queryType": "instant",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"3..\" [$__range]))",
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "queryType": "instant",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"4..\" [$__range]))",
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "queryType": "instant",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"5..\" [$__range]))",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "No requests in this period"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "2xx"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "3xx"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "4xx"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "5xx"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Bytes served over time",
+      "description": "Bytes sent to visitors per interval (same filters as above).",
+      "gridPos": {
+        "x": 12,
+        "y": 53,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(sum_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__auto]))",
+          "legendFormat": "Bytes"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 80,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "type": "row",
+      "title": "Tunnel & web server",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 61,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Edge connections",
+      "description": "Active tunnel connections (normal 4; dashed line) and new registrations. Many registrations = frequent reconnects.",
+      "gridPos": {
+        "x": 0,
+        "y": 62,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "cloudflared_tunnel_ha_connections",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "increase(cloudflared_tunnel_tunnel_register_success[$__rate_interval])",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#73BF69",
+                "value": 4
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Active connections"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "New registrations"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Tunnel responses by status",
+      "description": "HTTP status codes returned by the origin through the tunnel.",
+      "gridPos": {
+        "x": 8,
+        "y": 62,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (status_code) (rate(cloudflared_tunnel_response_by_code[$__rate_interval]))",
+          "legendFormat": "{{status_code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 50,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "2.."
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "3.."
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "4.."
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "5.."
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 37,
+      "type": "timeseries",
+      "title": "Tunnel errors",
+      "description": "Requests cloudflared could not deliver to nginx, and stream errors. Should stay at 0.",
+      "gridPos": {
+        "x": 16,
+        "y": 62,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(cloudflared_tunnel_request_errors[$__rate_interval])",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(cloudflared_proxy_connect_streams_errors[$__rate_interval])",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "axisSoftMax": 0.1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Request errors"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Stream errors"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 38,
+      "type": "timeseries",
+      "title": "Latency to Cloudflare (QUIC RTT)",
+      "description": "Smoothed round-trip time of each tunnel connection to the edge.",
+      "gridPos": {
+        "x": 0,
+        "y": 69,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "quic_client_smoothed_rtt",
+          "legendFormat": "Connection {{conn_index}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 39,
+      "type": "timeseries",
+      "title": "nginx connections",
+      "description": "Open connections in nginx (stub_status).",
+      "gridPos": {
+        "x": 8,
+        "y": 69,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "nginx_connections_active",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "nginx_connections_reading",
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "nginx_connections_writing",
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "nginx_connections_waiting",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Active"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Reading"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Writing"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Idle (keep-alive)"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 40,
+      "type": "table",
+      "title": "Edge locations",
+      "description": "Cloudflare data centres the tunnel is connected to (one row per connection).",
+      "gridPos": {
+        "x": 16,
+        "y": 69,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "cloudflared_tunnel_server_locations",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "Value": true
+            },
+            "renameByName": {
+              "connection_id": "Connection",
+              "edge_location": "Edge"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 41,
+      "type": "row",
+      "title": "Host · WSL",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 76,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 42,
+      "type": "state-timeline",
+      "title": "Services",
+      "description": "Green = running.",
+      "gridPos": {
+        "x": 0,
+        "y": 77,
+        "w": 16,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "node_systemd_unit_state{state=\"active\", name=~\"nginx.service|cloudflared.service|docker.service|gfilho-metrics.timer\"}",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Stopped",
+                  "color": "#F2495C",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Running",
+                  "color": "#73BF69",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#73BF69",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 75,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "rowHeight": 0.75,
+        "mergeValues": true,
+        "alignValue": "center",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 43,
+      "type": "stat",
+      "title": "Automatic restarts",
+      "description": "Times systemd restarted the service (Restart=on-failure) since WSL started, and units in a failed state.",
+      "gridPos": {
+        "x": 16,
+        "y": 77,
+        "w": 8,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "node_systemd_service_restart_total{name=\"nginx.service\"}",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "node_systemd_service_restart_total{name=\"cloudflared.service\"}",
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(node_systemd_unit_state{state=\"failed\"})",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FF9830",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "nginx"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "cloudflared"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failed units"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "CPU",
+      "description": "CPU use of the WSL VM (includes the Ascender lab that shares it).",
+      "gridPos": {
+        "x": 0,
+        "y": 83,
+        "w": 6,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval]))",
+          "legendFormat": "CPU"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "Memory",
+      "description": "Used and available memory in the WSL VM.",
+      "gridPos": {
+        "x": 6,
+        "y": 83,
+        "w": 6,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "node_memory_MemAvailable_bytes",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 35,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Used"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Available"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 46,
+      "type": "timeseries",
+      "title": "Disk",
+      "description": "Used space on the WSL virtual disk (/), computed like df: used / (used + available), so the blocks ext4 reserves for root are left out.",
+      "gridPos": {
+        "x": 12,
+        "y": 83,
+        "w": 6,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_free_bytes{mountpoint=\"/\"}) / (node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_free_bytes{mountpoint=\"/\"} + node_filesystem_avail_bytes{mountpoint=\"/\"})",
+          "legendFormat": "Used"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#F2495C",
+                "value": 0.9
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 47,
+      "type": "timeseries",
+      "title": "Network",
+      "description": "Traffic on the physical network interfaces (eth*); localhost, Docker and Kubernetes interfaces are left out.",
+      "gridPos": {
+        "x": 18,
+        "y": 83,
+        "w": 6,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(node_network_receive_bytes_total{device=~\"eth[0-9]+\"}[$__rate_interval]))",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(node_network_transmit_bytes_total{device=~\"eth[0-9]+\"}[$__rate_interval]))",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "insertNulls": false,
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Received"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sent"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 48,
+      "type": "stat",
+      "title": "Files",
+      "description": "Files in the production web root (/var/www/html).",
+      "gridPos": {
+        "x": 0,
+        "y": 90,
+        "w": 3,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "gfilho_site_files",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8AB8FF",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 49,
+      "type": "stat",
+      "title": "Site size",
+      "description": "Total size of the production web root.",
+      "gridPos": {
+        "x": 3,
+        "y": 90,
+        "w": 3,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "gfilho_site_bytes",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8AB8FF",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 50,
+      "type": "stat",
+      "title": "Backups",
+      "description": "Copies kept by deploy.sh and install-nginx.sh in /var/backups/gfilho.",
+      "gridPos": {
+        "x": 6,
+        "y": 90,
+        "w": 3,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(gfilho_backup_snapshots)",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8AB8FF",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 51,
+      "type": "stat",
+      "title": "Backup size",
+      "description": "Space used by /var/backups/gfilho.",
+      "gridPos": {
+        "x": 9,
+        "y": 90,
+        "w": 3,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "gfilho_backup_bytes",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8AB8FF",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
       "id": 52,
-      "type": "logs",
-      "title": "Avisos dos serviços",
-      "description": "Mensagens de aviso e erro do cloudflared, nginx, logrotate e do timer das métricas (journal).",
+      "type": "table",
+      "title": "Installed versions",
+      "description": "Hosting components (refreshed every 2 minutes).",
       "gridPos": {
         "x": 12,
-        "y": 94,
+        "y": 90,
         "w": 12,
-        "h": 10
+        "h": 7
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "targets": [
         {
           "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table",
           "datasource": {
-            "type": "loki",
-            "uid": "loki"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "expr": "{job=\"systemd-journal\"} |~ \"(?i)(err|warn|fail)\"",
-          "queryType": "range"
+          "expr": "gfilho_component_info",
+          "legendFormat": ""
         }
       ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "Value": true
+            },
+            "renameByName": {
+              "component": "Component",
+              "version": "Version"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
       "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending",
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
       }
     },
     {
       "id": 53,
-      "type": "logs",
-      "title": "Pedidos recentes (produção)",
-      "description": "Últimos pedidos de visitantes ao site, sem a monitorização nem ferramentas automáticas.",
+      "type": "row",
+      "title": "Logs",
+      "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 104,
+        "y": 97,
         "w": 24,
-        "h": 10
+        "h": 1
       },
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
+      "panels": [
         {
-          "refId": "A",
+          "id": 54,
+          "type": "logs",
+          "title": "nginx errors",
+          "description": "nginx error.log. \"open() failed\" means a request for a file that does not exist (a 404).",
+          "gridPos": {
+            "x": 0,
+            "y": 98,
+            "w": 12,
+            "h": 10
+          },
           "datasource": {
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\"",
-          "queryType": "range"
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "{job=\"nginx\", log=\"error\"}",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false
+          }
+        },
+        {
+          "id": 55,
+          "type": "logs",
+          "title": "Service warnings",
+          "description": "Warnings and errors from cloudflared, nginx, logrotate and the metrics timer (systemd journal).",
+          "gridPos": {
+            "x": 12,
+            "y": 98,
+            "w": 12,
+            "h": 10
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "{job=\"systemd-journal\"} |~ \"(?i)(err|warn|fail)\"",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false
+          }
+        },
+        {
+          "id": 56,
+          "type": "logs",
+          "title": "Recent requests",
+          "description": "Latest visitor requests to production, without monitoring probes and automated tools.",
+          "gridPos": {
+            "x": 0,
+            "y": 108,
+            "w": 24,
+            "h": 10
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "{job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\"",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false
+          }
         }
-      ],
-      "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending",
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false
-      }
+      ]
     }
   ]
 }

@@ -65,7 +65,26 @@ loki.source.journal "units" {
   max_age       = "24h"
   labels        = { job = "systemd-journal" }
   relabel_rules = loki.relabel.journal.rules
-  forward_to    = [loki.write.local.receiver]
+  forward_to    = [loki.process.journal.receiver]
+}
+
+// cloudflared logs every line at journal priority "info" and writes the real level in the message
+// (" WRN ", " ERR "...): use that one, so warnings show up as warnings in Grafana.
+loki.process "journal" {
+  stage.match {
+    selector = "{unit=\"cloudflared.service\"}"
+    stage.regex {
+      expression = "\\s(?P<lvl>DBG|INF|WRN|ERR|FTL)\\s"
+    }
+    stage.template {
+      source   = "lvl"
+      template = "{{ if eq .Value \"WRN\" }}warning{{ else if eq .Value \"ERR\" }}error{{ else if eq .Value \"FTL\" }}critical{{ else if eq .Value \"DBG\" }}debug{{ else }}info{{ end }}"
+    }
+    stage.labels {
+      values = { level = "lvl" }
+    }
+  }
+  forward_to = [loki.write.local.receiver]
 }
 
 loki.write "local" {

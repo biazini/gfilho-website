@@ -121,7 +121,8 @@ Cache lifetimes depend on the path:
 │   └── systemd/                 nginx drop-in: restart automatically if it dies
 ├── monitoring/                  Prometheus, Loki, Alloy, exporters and Grafana (Docker Compose)
 │   ├── install-monitoring.sh    Install or update the stack (run as root in WSL)
-│   └── grafana/dashboards/      The gfilho.net dashboard (provisioned, read-only)
+│   ├── grafana/build-dashboard.mjs  Source of the dashboard; writes grafana/dashboards/gfilho.json
+│   └── tests/                   check-queries.py and check-values.py: validate the dashboard
 ├── docs/architecture/           Diagrams: draw.io sources and PNG exports
 ├── tools/
 │   ├── build-images.ps1         Regenerate og-image.png, the icons and favicon.ico with headless Chrome
@@ -256,9 +257,30 @@ bash monitoring/install-monitoring.sh
 | `gfilho-metrics.timer` | — | Every 2 min: security.txt expiry, last deploy, backups, WSL offline time, pending updates, component versions |
 | `cloudflared` | 20241 | Tunnel connections, requests, errors and QUIC latency (built into cloudflared) |
 | Loki + Alloy | 3100 | nginx access and error logs, and the journal of nginx, cloudflared and logrotate; 14 days |
-| Grafana | 3000 | The dashboard `gfilho.net — Monitorização` |
+| Grafana | 3000 | The dashboard `gfilho.net — Monitoring` |
 
-The dashboard shows the current state (site, origin, tunnel, response time, TLS and security.txt expiry, active alerts), availability and latency over time, visitor traffic (pages, 404s, referrers, browsers vs bots), the tunnel, systemd services, host resources and the latest logs. The probes send the User-Agent `gfilho-monitor`, and the traffic panels leave them out. The logs do not record visitor IP addresses, so there are no "unique visitor" figures.
+The dashboard has seven sections:
+
+| Section | What it shows |
+|---|---|
+| Overview | Site and origin up/down, tunnel connections, latency, availability, alerts, page views and data served; TLS and security.txt expiry, last deploy, WSL uptime and downtime, pending updates |
+| Active alerts | Firing alerts with severity, component and the time they became active |
+| Availability & latency | A timeline of every check (public pages, origin, staging, redirects, DNS) and response times by phase |
+| Traffic · production | Responses by status class, requests per second, top pages, top 404s, top referrers, humans vs bots, bytes served |
+| Tunnel & web server | Edge connections, tunnel responses and errors, QUIC latency, nginx connections, edge locations |
+| Host · WSL | systemd services and restarts, CPU, memory, disk, network, published files, backups, installed versions |
+| Logs (collapsed) | nginx errors, service warnings and recent requests |
+
+Deploys and WSL starts are marked on the charts. A page view is a request to `/` or `/cases/*/` answered `200` (or `304` from the browser cache), without the monitoring probes (User-Agent `gfilho-monitor`), automated tools or local previews. The logs do not record visitor IP addresses, so there are no "unique visitor" figures.
+
+**Changing the dashboard.** Edit `monitoring/grafana/build-dashboard.mjs`, regenerate the JSON with `node monitoring/grafana/build-dashboard.mjs monitoring/grafana/dashboards/gfilho.json`, and run the installer again. Then check it with the two scripts in `monitoring/tests/` (inside WSL, with the stack running):
+
+```bash
+# every panel query runs through Grafana without errors and returns data
+python3 monitoring/tests/check-queries.py
+# the values match independent sources (access log, cloudflared, openssl, /proc, df, journal)
+sudo python3 monitoring/tests/check-values.py
+```
 
 The stack runs inside the same WSL as the site, so it can only show when the site was down **after** WSL comes back. Nothing here can send a notification while the PC is off. For that, add an external uptime monitor for `https://gfilho.net/` (for example a free HTTP monitor with email alerts) and the tunnel health notification in Cloudflare.
 
