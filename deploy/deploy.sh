@@ -20,12 +20,19 @@ src="$(cd "$(dirname "$0")/../site" && pwd)"
 [ -f "$src/index.html" ] || { echo "site/index.html not found in $src" >&2; exit 1; }
 today="$(date +%Y-%m-%d)"
 
-# sitemap.xml: when the page changes, set <lastmod> to today in site/ (commit it afterwards)
-if ! cmp -s "$src/index.html" "$dest/index.html" && [ -f "$src/sitemap.xml" ]; then
-  if ! grep -q "<lastmod>${today}</lastmod>" "$src/sitemap.xml"; then
-    sed -i -E "s#<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>#<lastmod>${today}</lastmod>#" "$src/sitemap.xml"
-    echo "sitemap: index.html changed, <lastmod> set to ${today} (commit site/sitemap.xml)"
-  fi
+# sitemap.xml: for each listed page whose HTML differs from the target, set its <lastmod> to today
+# in site/ (commit it afterwards). https://gfilho.net/cases/x/ maps to site/cases/x/index.html.
+if [ -f "$src/sitemap.xml" ]; then
+  for loc in $(sed -n -E 's#.*<loc>([^<]+)</loc>.*#\1#p' "$src/sitemap.xml"); do
+    rel="${loc#https://gfilho.net/}"
+    case "$rel" in ''|*/) rel="${rel}index.html" ;; esac
+    [ -f "$src/$rel" ] || continue
+    cmp -s "$src/$rel" "$dest/$rel" && continue
+    # only the <lastmod> inside this page's <url> block
+    if sed -n "\#<loc>${loc}</loc>#,\#</url>#p" "$src/sitemap.xml" | grep -q "<lastmod>${today}</lastmod>"; then continue; fi
+    sed -i -E "\#<loc>${loc}</loc>#,\#</url># s#<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>#<lastmod>${today}</lastmod>#" "$src/sitemap.xml"
+    echo "sitemap: ${rel} changed, <lastmod> set to ${today} (commit site/sitemap.xml)"
+  done
 fi
 
 # security.txt (RFC 9116): warn 30 days before Expires; the date itself is renewed by hand

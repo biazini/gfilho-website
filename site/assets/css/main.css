@@ -239,6 +239,54 @@ h2{font-family:var(--font-read);font-weight:500;font-size:var(--fs-h2);line-heig
 .notfound p{color:var(--muted)}
 .notfound .btn{justify-self:center}
 
+/* ---------- case studies (pages under /cases/) ---------- */
+.crumb{display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:0 0 var(--sp-4) -2px;color:var(--muted);font-size:var(--fs-small);font-weight:600;text-decoration:none}
+.crumb:hover{color:var(--ink)}
+.crumb .i{width:16px;height:16px;transform:scaleX(-1)}
+.case-hero{padding-block:clamp(28px,5vw,64px) clamp(40px,6vw,72px)}
+.case-hero h1{max-width:26ch;font-family:var(--font-read);font-weight:500;font-size:clamp(2rem,1.5rem + 2vw,3rem);line-height:1.1;letter-spacing:-.02em}
+.case-hero .lead{margin-top:var(--sp-4)}
+.case-meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin:var(--sp-4) 0 0;padding:0;list-style:none;font-size:var(--fs-small);color:var(--muted)}
+.case-meta li{display:inline-flex;align-items:center;gap:6px}
+.case-meta .i{width:15px;height:15px;color:var(--faint)}
+.case-hero .tags{margin-top:var(--sp-4)}
+.case-kpis{margin-top:var(--sp-6)}
+.kpis.kpis-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.kpis-4 .kpi{border-top:0;border-left:0}
+.kpis-4 .kpi+.kpi{border-left:1px solid var(--rule)}
+.note{max-width:80ch;margin-top:var(--sp-4);padding:12px 16px;border-left:3px solid var(--accent);border-radius:0 var(--r-m) var(--r-m) 0;background:var(--tint);font-size:var(--fs-small);line-height:1.55;color:var(--muted)}
+.star-nav{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-5)}
+.star-nav a{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 14px 6px 6px;border-radius:999px;border:1px solid var(--rule-2);background:var(--surface);color:var(--ink);font-size:.875rem;font-weight:600;text-decoration:none}
+.star-nav a:hover{background:var(--surface-2)}
+.star-nav b,.star-l{display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700}
+.star-nav b{width:28px;height:28px;font-size:.8125rem}
+.case-body{padding-block:var(--sp-7) var(--section);border-top:1px solid var(--rule)}
+.star{display:grid;grid-template-columns:56px minmax(0,1fr);gap:var(--sp-5);padding-block:var(--sp-7);border-top:1px solid var(--rule)}
+.star:first-child{padding-top:0;border-top:0}
+.star-l{width:56px;height:56px;border-radius:var(--r-l);font-family:var(--font-read);font-size:1.75rem;font-weight:600}
+.star h2{margin-bottom:var(--sp-4)}
+.prose{max-width:72ch}
+.prose>p,.prose>ul>li{font-family:var(--font-read);font-size:1.125rem;line-height:1.65;color:var(--text)}
+.prose>p+p{margin-top:var(--sp-4)}
+.prose>ul{margin:var(--sp-4) 0 0;padding-left:1.2em}
+.prose>ul.outcomes{padding-left:0}
+.prose>ul.outcomes>li{margin-top:0}
+.prose>ul>li+li{margin-top:var(--sp-2)}
+.prose>ul>li::marker{color:var(--accent)}
+.prose b{color:var(--ink);font-weight:600}
+.prose code,.steps code,.outcomes code{font-size:.875em;padding:1px 5px;border-radius:5px;background:var(--surface-2);color:var(--ink)}
+.case-h3{margin:var(--sp-6) 0 0;font-size:var(--fs-h3);font-weight:700;color:var(--ink)}
+.steps{list-style:none;counter-reset:step;display:grid;gap:var(--sp-3);max-width:80ch;margin:var(--sp-5) 0 0;padding:0}
+.steps li{counter-increment:step;position:relative;padding:18px 20px 18px 64px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-l);box-shadow:var(--sh-1);font-family:var(--font-read);font-size:1.0625rem;line-height:1.6;color:var(--text)}
+.steps li::before{content:counter(step);position:absolute;left:20px;top:18px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-family:var(--font-ui);font-size:.8125rem;font-weight:700}
+.steps b{display:block;margin-bottom:2px;font-family:var(--font-ui);font-size:1rem;font-weight:700;color:var(--ink)}
+.outcomes{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3);max-width:80ch;margin:var(--sp-5) 0 0;padding:0}
+.outcomes li{padding:16px 18px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-l);box-shadow:var(--sh-1);font-size:.9375rem;line-height:1.5;color:var(--text)}
+.outcomes b{display:block;margin-bottom:6px;font-size:var(--fs-label);font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.case-end{max-width:80ch;margin-top:var(--sp-7)}
+.case-end .list{margin-top:var(--sp-5)}
+.case-end .sec-h{font-family:var(--font-ui);line-height:1.6}
+
 /* ---------- responsive ---------- */
 @media (max-width:1100px){
  .nav a .i{display:none}
@@ -312,6 +360,22 @@ h2{font-family:var(--font-read);font-weight:500;font-size:var(--fs-h2);line-heig
  .kpi:nth-child(2){border-top:1px solid var(--rule)}
  .kpi:nth-child(even){border-left:0}
  .nav a{padding-inline:10px;font-size:.875rem}
+}
+/* case pages have no section nav, so the header stays on one row at every width */
+@media (max-width:980px){
+ .case-page{--hdr-h:64px}
+ .hdr-in.hdr-case{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"brand theme cta";padding-top:0}
+ .kpis.kpis-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .kpis-4 .kpi:nth-child(n+3){border-top:1px solid var(--rule)}
+ .kpis-4 .kpi:nth-child(3){border-left:0}
+}
+@media (max-width:720px){
+ .case-page{--hdr-h:60px}
+ .star{grid-template-columns:minmax(0,1fr);gap:var(--sp-3);padding-block:var(--sp-6)}
+ .star-l{width:44px;height:44px;font-size:1.375rem}
+ .steps li{padding:16px 16px 16px 56px}
+ .steps li::before{left:16px;top:16px}
+ .outcomes{grid-template-columns:minmax(0,1fr)}
 }
 /* short screens (landscape phones, 200% zoom): don't pin the header */
 @media (max-height:500px){

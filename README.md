@@ -33,6 +33,7 @@ A static, single-page site: plain HTML, CSS and two small JavaScript files. No f
 ## 1. Features
 
 - **One page, five sections:** About, Toolbox, Projects, Articles and Links, with a header navigation that highlights the section in view.
+- **Case studies:** each project links to a dedicated page under `/cases/` written in the STAR format (Situation, Task, Action, Result), with the measured results first. Every page has its own URL, so it can be shared directly.
 - **Light and dark themes:** the page follows the operating system; the header button overrides it and remembers the choice. The theme is applied before the first paint, so there is no flash.
 - **Accessible:** semantic landmarks, a skip link, visible focus, tap targets of at least 24 px and colour contrast that meets WCAG 2.2 AA in both themes.
 - **Fast:** self-hosted, subset fonts; no render-blocking third-party code; long cache lifetimes for files whose names never change.
@@ -100,6 +101,7 @@ Cache lifetimes depend on the path:
 ├── site/                        What gets published (the web root)
 │   ├── index.html               The page
 │   ├── 404.html                 Not-found page
+│   ├── cases/<slug>/index.html  Project case studies (STAR), linked from the project cards
 │   ├── assets/css/main.css      All styles (design tokens for both themes at the top)
 │   ├── assets/js/theme.js       Applies the saved light/dark choice before the first paint
 │   ├── assets/js/main.js        Theme switch, footer year, section highlight, "Latest project" pulse
@@ -155,7 +157,7 @@ bash deploy/deploy.sh production
 ### 5.3 What `deploy.sh` does
 
 1. Checks that it runs as root and that `site/index.html` exists.
-2. If `index.html` differs from the deployed copy, sets `<lastmod>` in `site/sitemap.xml` to today. Commit that file together with the page.
+2. For every page listed in `site/sitemap.xml` whose HTML differs from the deployed copy, sets that page’s `<lastmod>` to today. Commit the file together with the page.
 3. Reads `Expires:` in `site/.well-known/security.txt` and prints a warning, with a renewal date one year ahead, from 30 days before it expires. The deploy carries on either way.
 4. Copies the current target to `/var/backups/gfilho/<timestamp>-<target>/`.
 5. Makes the target an exact copy of `site/` with `rsync --delete --delete-excluded`. Dotfiles and backup files are never published, except `/.well-known/`.
@@ -175,7 +177,8 @@ Snapshots ending in `-nginx` hold the nginx configuration (`sites-available`, `s
 ### 5.5 Conventions
 
 - **Articles and projects:** the newest goes first. The featured project keeps `id="latest-project"`, which the "Latest project" link points to.
-- **Cache busting:** CSS and JS are cached for an hour. After changing them, bump `?v=` in the `<link>` and `<script>` tags of `index.html` (and in `404.html` for the CSS and `theme.js`).
+- **Case studies:** copy an existing `site/cases/<slug>/index.html`, keep the four STAR sections and the results strip, and use only measured, published numbers (say where they were measured). Add a "Read the case study" button to the project card, a `<url>` to `sitemap.xml`, and point the "Next case study" links of the other pages at it. The page includes only the icons it uses in its own sprite.
+- **Cache busting:** CSS and JS are cached for an hour. After changing them, bump `?v=` in the `<link>` and `<script>` tags of `index.html`, `404.html` and every page under `site/cases/`.
 - **Sitemap:** `deploy.sh` keeps `<lastmod>` up to date (see [5.3](#53-what-deploysh-does)); commit the updated `sitemap.xml` together with the page.
 - **security.txt:** `site/.well-known/security.txt` ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)) expires on 2027-10-18. Update the `Expires:` line by hand when `deploy.sh` warns, and deploy again.
 - **CSP:** the policy only allows same-origin resources. Inline `<script>` blocks and `style=""` attributes are blocked, so keep styles in `main.css` and code in `main.js`. `theme.js` is the one script loaded before the stylesheet; the JSON-LD block is data, not script, and is not affected.

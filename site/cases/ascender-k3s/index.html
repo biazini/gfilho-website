@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" class="case-page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>An enterprise Ascender platform on k3s, documented end to end · Case study · Guilherme Filho</title>
+<meta name="description" content="Case study: a reproducible, verified procedure to install Ascender 25.6.2 on k3s and Ubuntu Server 26.04 LTS, from DNS and TLS to backup, upgrade and certificate renewal.">
+<meta name="theme-color" content="#10172A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#E8EDF4" media="(prefers-color-scheme: light)">
+<link rel="canonical" href="https://gfilho.net/cases/ascender-k3s/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="gfilho.net">
+<meta property="og:url" content="https://gfilho.net/cases/ascender-k3s/">
+<meta property="og:title" content="An enterprise Ascender platform on k3s, documented end to end">
+<meta property="og:description" content="Case study: a reproducible, verified procedure to install Ascender 25.6.2 on k3s and Ubuntu Server 26.04 LTS, from DNS and TLS to backup, upgrade and certificate renewal.">
+<meta property="og:image" content="https://gfilho.net/og-image.png?v=2">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Guilherme Filho, Automation • Infrastructure">
+<meta property="article:published_time" content="2026-10-20">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico?v=2" sizes="32x32">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<link rel="manifest" href="/site.webmanifest?v=2">
+<link rel="preload" href="/assets/fonts/newsreader-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/hanken-grotesk-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+<script src="/assets/js/theme.js?v=1"></script>
+<link rel="stylesheet" href="/assets/css/main.css?v=9">
+<script src="/assets/js/main.js?v=4" defer></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "An enterprise Ascender platform on k3s, documented end to end",
+  "description": "Case study: a reproducible, verified procedure to install Ascender 25.6.2 on k3s and Ubuntu Server 26.04 LTS, from DNS and TLS to backup, upgrade and certificate renewal.",
+  "datePublished": "2026-10-20",
+  "dateModified": "2026-10-20",
+  "url": "https://gfilho.net/cases/ascender-k3s/",
+  "mainEntityOfPage": "https://gfilho.net/cases/ascender-k3s/",
+  "image": "https://gfilho.net/og-image.png?v=2",
+  "author": {
+    "@type": "Person",
+    "name": "Guilherme Filho",
+    "url": "https://gfilho.net/"
+  },
+  "isBasedOn": "https://github.com/biazini/ascender-k3s-installation",
+  "keywords": "ascender, k3s, kubernetes, ubuntu"
+}
+</script>
+</head>
+<body>
+<svg width="0" height="0" class="sprite" aria-hidden="true">
+ <symbol id="logo" viewBox="0 0 32 32"><defs><linearGradient id="gf-navy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1C2A4D"/><stop offset="1" stop-color="#0D1528"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#gf-navy)"/><rect x=".5" y=".5" width="31" height="31" rx="7.5" fill="none" stroke="#4F8CFF" stroke-opacity=".6"/><g stroke="#15203B" stroke-width="1.5" stroke-linejoin="round"><path d="M16 15.95 25 20.45 16 24.95 7 20.45Z" fill="#2F63DA"/><path d="M16 11.35 25 15.85 16 20.35 7 15.85Z" fill="#5B95FF"/><path d="M16 6.75 25 11.25 16 15.75 7 11.25Z" fill="#F0F4FA"/></g></symbol>
+ <symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+ <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+ <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+ <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+ <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+ <symbol id="i-github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol>
+ <symbol id="i-linkedin" viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></symbol>
+ <symbol id="i-article" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8M16 13H8M16 17H8"/></symbol>
+ <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+ <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+ <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+ <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+ <symbol id="i-go" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></symbol>
+ <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+</svg>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+ <div class="hdr-in hdr-case">
+  <a class="brand" href="/">
+   <span class="brand-mark" aria-hidden="true"><svg class="logo"><use href="#logo"/></svg></span>
+   <span class="brand-txt"><b>Guilherme Filho</b><small>Automation<i aria-hidden="true"></i>Infrastructure</small></span>
+  </a>
+  <button type="button" class="theme-toggle" aria-label="Switch theme" hidden><svg class="i i-sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="i i-moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+  <a class="btn btn-pri hdr-cta" href="mailto:g.biazini.filho@outlook.com"><svg class="i" aria-hidden="true"><use href="#i-mail"/></svg><span class="cta-txt">Contact</span></a>
+ </div>
+</header>
+
+<main id="main" tabindex="-1">
+ <div class="hero-band">
+  <div class="wrap case-hero">
+   <a class="crumb" href="/#projects"><svg class="i" aria-hidden="true"><use href="#i-right"/></svg>All projects</a>
+   <p class="eyebrow"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg>Case study · Installation guide</p>
+   <h1>An enterprise Ascender platform on k3s, documented end to end</h1>
+   <div class="lead"><p>An installer run is not a platform. I turned the installation of Ascender 25.6.2 on Ubuntu Server 26.04 LTS into a reproducible, verified procedure, from the DNS record and the TLS certificate to backup, upgrade and certificate renewal.</p></div>
+   <ul class="case-meta">
+    <li><svg class="i" aria-hidden="true"><use href="#i-cal"/></svg><time datetime="2026-10-20">Oct 2026</time></li>
+    <li><svg class="i" aria-hidden="true"><use href="#i-github"/></svg>biazini/ascender-k3s-installation</li>
+    <li><svg class="i" aria-hidden="true"><use href="#i-layers"/></svg>Ascender 25.6.2 · k3s · Ubuntu Server 26.04 LTS</li>
+   </ul>
+   <ul class="tags"><li class="tag t-pos">ascender</li><li class="tag">k3s</li><li class="tag">kubernetes</li><li class="tag">ubuntu</li></ul>
+   <section class="case-kpis" aria-labelledby="h-glance">
+    <h2 class="sr-only" id="h-glance">Results at a glance</h2>
+    <div class="kpis kpis-4">
+     <div class="kpi"><div class="k">Procedure</div><div class="v">9 phases</div><div class="s">from server baseline to verification</div></div>
+     <div class="kpi"><div class="k">Pitfalls</div><div class="v">6</div><div class="s">non-obvious issues found and documented</div></div>
+     <div class="kpi"><div class="k">Resilience</div><div class="v">2 tests</div><div class="s">reboot and full power cycle</div></div>
+     <div class="kpi"><div class="k">Reference files</div><div class="v">5</div><div class="s">every file created on the server</div></div>
+    </div>
+    <p class="note">Validated on a clean Ubuntu Server 26.04 LTS host with Ascender 25.6.2, ascender-install <code>a737ea8</code> and k3s v1.36.5+k3s1. Single node: high availability is out of scope.</p>
+   </section>
+   <nav class="star-nav" aria-label="Case study sections">
+    <a href="#situation"><b aria-hidden="true">S</b>Situation</a><a href="#task"><b aria-hidden="true">T</b>Task</a><a href="#action"><b aria-hidden="true">A</b>Action</a><a href="#result"><b aria-hidden="true">R</b>Result</a>
+   </nav>
+  </div>
+ </div>
+
+ <article class="wrap case-body" aria-label="Case study">
+  <section class="star" id="situation" aria-labelledby="h-situation">
+   <span class="star-l" aria-hidden="true">S</span>
+   <div class="prose">
+    <h2 id="h-situation">Situation</h2>
+    <p>Ascender, CIQ’s open-source distribution of AWX, ships with an installer that deploys the application. A corporate deployment needs much more around it: a stable DNS name, a certificate from the corporate PKI, a host firewall, proof that everything works, and a way to back it up, upgrade it and renew its certificate later.</p>
+    <p>Without a written procedure, each installation is a one-off that only its author can repeat, review or support.</p>
+   </div>
+  </section>
+  <section class="star" id="task" aria-labelledby="h-task">
+   <span class="star-l" aria-hidden="true">T</span>
+   <div class="prose">
+    <h2 id="h-task">Task</h2>
+    <p>Write the reference procedure for a dedicated Ubuntu Server 26.04 LTS host, so that an engineer with no prior exposure to Ascender or Kubernetes can reproduce the deployment by following the steps in order, and prove every step on a clean server.</p>
+   </div>
+  </section>
+  <section class="star" id="action" aria-labelledby="h-action">
+   <span class="star-l" aria-hidden="true">A</span>
+   <div class="prose">
+    <h2 id="h-action">Action</h2>
+    <ol class="steps">
+     <li><b>Architecture first</b>High-level and low-level designs in draw.io: who uses the platform, its tiers, every Kubernetes object, host component, port and network path, plus each design decision and its rationale.</li>
+     <li><b>TLS and DNS before the server</b>The FQDN drives the ingress host rule, the CSRF trusted origins and the certificate SAN, so the DNS record and the corporate certificate are requested before anything is installed.</li>
+     <li><b>Nine phases with expected results</b>Server baseline, DNS and TLS, dependencies, k3s, host firewall, installer retrieval, configuration, execution and verification. Each step states the output that confirms it worked.</li>
+     <li><b>Least exposure</b>The <code>ufw</code> host firewall follows the k3s guidance: SSH and the Kubernetes API only from the administration network, with the pod and service networks trusted.</li>
+     <li><b>Pinned versions and reference files</b>A software bill of materials pins every component, and a copy of every file created on the server is kept in the repository, laid out by its absolute path.</li>
+     <li><b>Day-2 operations</b>Service management, logs, backup and restore, upgrade, certificate renewal, operating system patching, uninstall and troubleshooting.</li>
+    </ol>
+    <h3 class="case-h3">What validation found</h3>
+    <ul>
+     <li>The installer asks APT for <code>kubectl</code> before it registers the Kubernetes repository, so a clean system fails early. Registering the repository first fixes it.</li>
+     <li><code>ufw</code> does not filter the ports k3s ServiceLB publishes (they are forwarded through DNAT), so exposure of the web tier belongs at the perimeter firewall.</li>
+     <li>A failed project sync is “sticky”: re-running the installer re-evaluates the last update, so a fresh sync is needed first.</li>
+    </ul>
+   </div>
+  </section>
+  <section class="star" id="result" aria-labelledby="h-result">
+   <span class="star-l" aria-hidden="true">R</span>
+   <div class="prose">
+    <h2 id="h-result">Result</h2>
+    <ul class="outcomes">
+     <li><b>Reproducible</b>A clean host reaches a working Ascender over HTTPS, with a corporate certificate, by following the guide in order.</li>
+     <li><b>Resilient</b>A reboot and a full power-cycle test confirm that the platform comes back on its own before handover.</li>
+     <li><b>Reusable</b>Published under the MIT License for code and configuration, and CC BY 4.0 for the documentation and diagrams.</li>
+     <li><b>A foundation</b>The same platform runs my CIS Level 1 baseline and the self-healing lab.</li>
+    </ul>
+    <h3 class="case-h3">What it means for a team</h3>
+    <ul>
+     <li><b>Repeatable installs:</b> the next engineer follows a tested procedure instead of reverse-engineering the last one.</li>
+     <li><b>Secure by default:</b> TLS from day one, a host firewall and documented network flows, ready for a security review.</li>
+     <li><b>Supportable:</b> day-2 tasks and troubleshooting are written down before they are needed.</li>
+    </ul>
+   </div>
+  </section>
+
+  <section class="case-end" aria-labelledby="h-more">
+   <h2 class="sec-h" id="h-more"><svg class="i" aria-hidden="true"><use href="#i-box"/></svg>Explore the project</h2>
+   <div class="actions">
+    <a class="btn btn-pri" href="https://github.com/biazini/ascender-k3s-installation#readme" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg>Read the guide<svg class="i i-go" aria-hidden="true"><use href="#i-go"/></svg><span class="sr-only"> (opens in a new tab)</span></a>
+    <a class="btn" href="https://github.com/biazini/ascender-k3s-installation" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-github"/></svg>View on GitHub<span class="sr-only"> (opens in a new tab)</span></a>
+   </div>
+   <div class="list">
+    <a class="row" href="/cases/self-healing/">
+     <span class="tk-badge"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg></span>
+     <span><b>Next case study: Self-healing servers with Event-Driven Ansible and Ascender</b><small>Lab project · Event-Driven Ansible</small></span>
+     <svg class="i tk-go" aria-hidden="true"><use href="#i-right"/></svg>
+    </a>
+   </div>
+  </section>
+ </article>
+</main>
+
+<footer class="site-footer">
+ <div class="wrap foot">
+  <span class="foot-brand"><span class="brand-mark" aria-hidden="true"><svg class="logo"><use href="#logo"/></svg></span>Guilherme Filho</span>
+  <nav class="foot-nav" aria-labelledby="foot-nav-label">
+   <p class="snav-label" id="foot-nav-label">gfilho.net</p>
+   <a href="/">Home</a><a href="/#projects">Projects</a><a href="/#articles">Articles</a><a href="/#links">Links</a>
+  </nav>
+  <div class="foot-meta">
+   <span><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg>Coimbra, Portugal</span>
+   <span><svg class="i" aria-hidden="true"><use href="#i-mail"/></svg><a href="mailto:g.biazini.filho@outlook.com">g.biazini.filho@outlook.com</a></span>
+   <span>© <span id="yr">2026</span></span>
+  </div>
+ </div>
+</footer>
+</body>
+</html>
