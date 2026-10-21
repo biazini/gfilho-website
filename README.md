@@ -73,7 +73,7 @@ Both server blocks include the same snippet, [`deploy/nginx/gfilho-common.conf`]
 1. **Canonical host.** Requests for `www.gfilho.net`, or requests that reached Cloudflare over plain HTTP (the `CF-Visitor` header carries `"scheme":"http"`), get a `301` to `https://gfilho.net` with the same path.
 2. **Hidden files.** Dotfiles (except `/.well-known/`), editor leftovers and backup files (`.bak`, `.old`, `.orig`, `.swp`, `~` and similar) always return `404`, even if one ends up in the web root by mistake.
 3. **Directories.** A directory without the trailing slash (`/cases/self-healing`) gets a **relative** `301` to `/cases/self-healing/` (`absolute_redirect off`, so nginx never sends its internal `:8088` port). `/cases/` itself redirects to `/#projects`, and any other directory without an `index.html` (`/assets/`, `/.well-known/`) gets the 404 page instead of nginx's default 403.
-4. **Static files.** Anything else is served from the web root with `try_files`; a missing file gets the custom `/404.html` page with a real `404` status.
+4. **Static files.** Anything else is served from the web root with `try_files`; a missing file gets the custom `/404.html` page with a real `404` status. Missing files are not written to `error.log` (`log_not_found off`): bots probing for WordPress or `.env` files would bury real errors. They stay in the access log and on the dashboard's Top 404s.
 
 Security headers are set at server level with `always`, so they are sent on every response, including redirects and errors:
 

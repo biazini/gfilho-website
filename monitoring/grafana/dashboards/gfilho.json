@@ -7166,7 +7166,7 @@
           "id": 45,
           "type": "logs",
           "title": "nginx errors",
-          "description": "nginx error.log. \"open() failed\" means a request for a file that does not exist (a 404).",
+          "description": "nginx error.log, without what scanners cause on purpose: a directory without a page (\"directory index … is forbidden\", answered 404) and an oversized POST (\"too large body\", answered 413). Both stay visible as 404 and 413 in Top 404s and Unusual requests. Missing files are no longer logged (log_not_found off since 2026-10-21); older \"No such file or directory\" lines are hidden too. Anything left here is a real nginx problem.",
           "gridPos": {
             "x": 0,
             "y": 127,
@@ -7184,7 +7184,7 @@
                 "type": "loki",
                 "uid": "loki"
               },
-              "expr": "{job=\"nginx\", log=\"error\"}",
+              "expr": "{job=\"nginx\", log=\"error\"} != \"directory index of\" != \"client intended to send too large body\" != \"failed (2: No such file or directory)\"",
               "queryType": "range"
             }
           ],

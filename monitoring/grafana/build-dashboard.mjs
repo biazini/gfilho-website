@@ -465,7 +465,8 @@ strip('Maintenance', 'Package updates waiting in the local APT cache (SecurityUp
 ], pos(0, 54, 12, 4), { valueSize: 22 });
 chips('Installed versions', 'Hosting components (refreshed every 2 minutes).', prom('gfilho_component_info', '{{component}} {{version}}'), pos(12, 54, 12, 4), C.blue);
 row('Logs', 58, { collapsed: true });
-logs('nginx errors', 'nginx error.log. "open() failed" means a request for a file that does not exist (a 404).', '{job="nginx", log="error"}', pos(0, 59, 12, 10));
+logs('nginx errors', 'nginx error.log, without what scanners cause on purpose: a directory without a page ("directory index … is forbidden", answered 404) and an oversized POST ("too large body", answered 413). Both stay visible as 404 and 413 in Top 404s and Unusual requests. Missing files are no longer logged (log_not_found off since 2026-10-21); older "No such file or directory" lines are hidden too. Anything left here is a real nginx problem.',
+  '{job="nginx", log="error"} != "directory index of" != "client intended to send too large body" != "failed (2: No such file or directory)"', pos(0, 59, 12, 10));
 logs('Service warnings', 'Warnings and errors from cloudflared, nginx, logrotate and the metrics timer (systemd journal).', '{job="systemd-journal"} |~ "(?i)(err|warn|fail)"', pos(12, 59, 12, 10));
 logs('Recent visitor requests', 'Latest visitor requests to production, without monitoring probes and automated tools.', ACC, pos(0, 69, 24, 10));
 logs('Unusual requests · raw lines', 'The full access-log lines behind "Unusual requests".', `${ACC} ${PAT} ${UNUSUAL}`, pos(0, 79, 24, 10));

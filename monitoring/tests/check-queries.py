@@ -7,8 +7,8 @@ import glob, json, re, sys, time, urllib.request, urllib.error
 DIR = "/opt/gfilho-monitoring/grafana/dashboards"
 RANGES = {"1h": 3600, "24h": 86400, "7d": 7 * 86400}
 WANT = sys.argv[1:] or list(RANGES)
-# empty is the healthy state for these (no alert, no 5xx, nothing unusual); in short ranges any traffic panel can be empty
-EXPECT_EMPTY = {("Alert history", "A"), ("Visitor traffic", "E"), ("Unusual requests", "A"), ("Unusual requests · raw lines", "A")}
+# empty is the healthy state for these (no alert, no 5xx, nothing unusual, no nginx error); in short ranges any traffic panel can be empty
+EXPECT_EMPTY = {("Alert history", "A"), ("Visitor traffic", "E"), ("Unusual requests", "A"), ("Unusual requests · raw lines", "A"), ("nginx errors", "A")}
 UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
 def seconds(text):
