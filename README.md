@@ -140,7 +140,7 @@ Cache lifetimes depend on the path:
 |---|---|
 | WSL 2 with Ubuntu 26.04 LTS, nginx, `rsync` and `curl` | Serving and deploying the site (run the scripts as root). The WSL distribution is still called `Ubuntu-24.04`: it was upgraded in place. |
 | Docker Engine with the Compose plugin (inside WSL) | The local monitoring stack ([9. Monitoring](#9-monitoring)). Not needed to serve the site. |
-| `cloudflared` with a named tunnel whose ingress points at `http://localhost:8088` | Publishing production. Not needed to work on staging. |
+| `cloudflared` with a named tunnel whose ingress points at `http://localhost:8088`, and `edge-ip-version: "4"` in `/etc/cloudflared/config.yml` (the IPv6 route of this PC drops now and then, which made tunnel connections fail with "network is unreachable"; visitors still reach the site over IPv6 through Cloudflare) | Publishing production. Not needed to work on staging. |
 | Google Chrome on Windows | Regenerating images (`tools/build-images.ps1`). |
 | A code editor; optionally VS Code with the Draw.io Integration extension (`hediet.vscode-drawio`) | Editing the page and the diagrams. |
 
