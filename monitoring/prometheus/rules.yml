@@ -1,5 +1,5 @@
 # Alert rules for gfilho.net. There is no Alertmanager: firing and pending alerts are shown on the
-# Grafana Overview dashboard ("Alerts now", "Alert history"). For notifications while the whole PC is
+# top of the Grafana dashboard ("Alerts now", "Alert history"). For notifications while the whole PC is
 # off, use an external uptime monitor as well (see README, "Monitoring").
 # Unit tests: rules.test.yml (promtool, see README).
 groups:

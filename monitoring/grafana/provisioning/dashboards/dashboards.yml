@@ -3,7 +3,7 @@ providers:
   - name: gfilho
     folder: gfilho.net
     type: file
-    disableDeletion: true
+    disableDeletion: false     # a JSON file removed from the repository removes its dashboard too (no orphans)
     allowUiUpdates: false
     updateIntervalSeconds: 60
     options:

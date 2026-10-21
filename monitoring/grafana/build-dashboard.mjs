@@ -1,7 +1,8 @@
-// Source of the three provisioned (read-only) gfilho.net dashboards in monitoring/grafana/dashboards/:
-//   gfilho.json            uid gfilho-overview    Overview: is the site reachable, fast and healthy? (Grafana home)
-//   gfilho-analytics.json  uid gfilho-analytics   Analytics & Security: who visits, what fails, what probes the site
-//   gfilho-infra.json      uid gfilho-infra       Infrastructure & Tunnel: services, tunnel, nginx, host, publishing
+// Source of the provisioned (read-only) gfilho.net dashboard, monitoring/grafana/dashboards/gfilho.json
+// (uid gfilho-overview, the Grafana home page). One page, most urgent first: status, lifecycle, uptime and
+// alerts at the top, then the sections Latency & traffic, Visitors & security, Services, Cloudflare Tunnel,
+// Web server & probes, Host · WSL, Publishing & monitoring, and Logs (collapsed). Grafana only queries the
+// panels in view, so the sections further down cost nothing until you scroll to them.
 // Edit this file, then regenerate the JSON and reinstall:
 //   node monitoring/grafana/build-dashboard.mjs monitoring/grafana/dashboards
 //   sudo bash monitoring/install-monitoring.sh      # Grafana reloads the dashboards within a minute
@@ -21,7 +22,8 @@ const C = { green: '#73BF69', amber: '#FF9830', red: '#F2495C', blue: '#5794F2',
 const REQH = 'suffix: req/h';      // one unit for every request rate, so nginx, tunnel and log figures compare directly
 
 let B;                             // the dashboard being built: its panels and id counter
-const pos = (x, y, w, h) => ({ x, y, w, h });
+let Y0 = 0;                        // each section is laid out from y = 0; below() moves that origin under the panels already placed
+const pos = (x, y, w, h) => ({ x, y: y + Y0, w, h });
 const th = (...steps) => ({ mode: 'absolute', steps: steps.map(([color, value]) => ({ color, value })) });
 const prom = (expr, legend = '', extra = {}) => ({ datasource: PROM, expr, legendFormat: legend, ...extra });
 const loki = (expr, legend = '', extra = {}) => ({ datasource: LOKI, expr, legendFormat: legend, ...extra });
@@ -31,7 +33,6 @@ const forRef = (i, props) => ({ matcher: { id: 'byFrameRefID', options: refAt(i)
 const byRef = names => (names || []).map((n, i) => forRef(i, [{ id: 'displayName', value: n }]));
 const byName = colors => Object.entries(colors).map(([n, c]) => ({ matcher: { id: 'byName', options: n }, properties: [{ id: 'color', value: { mode: 'fixed', fixedColor: c } }] }));
 const map = pairs => [{ type: 'value', options: Object.fromEntries(pairs.map(([v, text, color], i) => [String(v), { text, color, index: i }])) }];
-const goto = (title, uid) => ({ title, url: '/d/' + uid + '/?${__url_time_range}', targetBlank: false });
 
 // probe and unit states: UP / DOWN, plus UNKNOWN when Prometheus cannot reach the exporter (no sample is not "up")
 const PROBE = map([[0, 'DOWN', C.red], [0.5, 'UNKNOWN', C.grey], [1, 'UP', C.green]]);
@@ -48,6 +49,7 @@ const CODE_COLORS = [['2..', C.green], ['3..', C.blue], ['4..', C.amber], ['5..'
 
 // ---------------------------------------------------------------- panel helpers
 function board() { B = { id: 0, top: [] }; B.into = B.top; }
+function below() { Y0 = 0; Y0 = Math.max(0, ...B.top.map(p => p.gridPos.y + (p.type === 'row' ? 1 : p.gridPos.h))); }
 function push(p) { const panel = { id: ++B.id, ...p }; B.into.push(panel); return panel; }
 function row(title, y, { collapsed = false } = {}) {
   const r = { id: ++B.id, type: 'row', title, collapsed, gridPos: pos(0, y, 24, 1), panels: [] };
@@ -256,7 +258,6 @@ const ANN = {
   tunnel: { datasource: PROM, enable: true, iconColor: C.teal, name: 'Tunnel registrations', expr: 'changes(cloudflared_tunnel_tunnel_register_success[2m]) > 0', step: '1m', titleFormat: 'Tunnel connection registered', textFormat: 'cloudflared (re)connected to the Cloudflare edge' },
 };
 const LINKS = [
-  { title: 'gfilho.net dashboards', type: 'dashboards', tags: ['gfilho.net'], asDropdown: false, includeVars: false, keepTime: true, targetBlank: false, icon: 'external link' },
   { title: 'Alert rules', url: '/alerting/list', type: 'link', targetBlank: false, icon: 'bolt', keepTime: false },
   { title: 'Live site', url: 'https://gfilho.net/', type: 'link', targetBlank: true, icon: 'external link' },
   { title: 'Runbook (README → Monitoring)', url: 'https://github.com/biazini/gfilho-website#9-monitoring', type: 'link', targetBlank: true, icon: 'doc' },
@@ -307,7 +308,7 @@ const EDGE_NAMES = Object.entries(CITIES).map(([code, city]) => ({ id: 'renameBy
   regex: '^Connection (\\d+) · ' + code + '(\\d+)$', renamePattern: 'Connection $1 → ' + city + ' (' + code.toUpperCase() + '$2)' } }));
 const ALERT_STATE = map([[1, 'Pending', C.amber], [2, 'Firing', C.red]]);
 
-// ================================================================ 1. Overview
+// ================================================================ status (top, no row: always open)
 board();
 strip('Status', 'Is the site reachable right now? Public site = all public pages pass from the internet (DNS → Cloudflare → tunnel → nginx); Origin = nginx answered directly. Public DOWN with Origin UP points at Cloudflare or the tunnel; both DOWN at nginx or WSL. UNKNOWN = Prometheus cannot reach the probe exporter. Response time colours follow the web.dev TTFB guidance (0.8 s / 1.8 s). p95, Availability and Monitored cover the selected range; Availability counts only the time monitoring was running, and Monitored says how much of the range that was (below 100 % = WSL or the stack was off). The probes run from this PC, so a local network fault looks like an outage: pair this with an external uptime monitor (README → Monitoring).', [
   { name: 'Public site', q: prom(probeState(PUBLIC)), mappings: PROBE, thresholds: PROBE_TH },
@@ -318,7 +319,7 @@ strip('Status', 'Is the site reachable right now? Public site = all public pages
   { name: 'Availability', q: prom(`sum(sum_over_time(probe_success{${PUBLIC}, ${HOME}}[$__range])) / sum(count_over_time(probe_success{${PUBLIC}, ${HOME}}[$__range]))`), unit: 'percentunit', decimals: 2, thresholds: th([C.amber, null], [C.green, 0.99999]) },
   { name: 'Monitored', q: prom(`clamp_max(sum(count_over_time(probe_success{${PUBLIC}, ${HOME}}[$__range])) / ($__range_s / 60), 1)`), unit: 'percentunit', decimals: 1, thresholds: th([C.amber, null], [C.green, 0.995]) },
   { name: 'Alerts firing', q: prom('count(ALERTS{alertstate="firing"}) or vector(0)'), thresholds: ZERO_OK },
-], pos(0, 0, 24, 4), { valueSize: 30 }).links = [goto('Infrastructure & Tunnel', 'gfilho-infra')];
+], pos(0, 0, 24, 4), { valueSize: 30 });
 strip('Lifecycle', 'Time left until the TLS certificate (earliest expiry among every HTTPS address probed; Cloudflare renews it) and /.well-known/security.txt expire (renew it before 30 days: the SecurityTxtExpiringSoon alert fires then). WSL offline = time WSL was not running, from the systemd journal: the site was down then.', [
   { name: 'TLS certificate expires in', q: prom('min(probe_ssl_earliest_cert_expiry{job=~"blackbox_public|blackbox_redirects"}) - time()'), unit: 'dtdurations', thresholds: th([C.red, null], [C.amber, 14 * DAY], [C.green, 30 * DAY]) },
   { name: 'security.txt expires in', q: prom('gfilho_security_txt_expires_timestamp_seconds - time()'), unit: 'dtdurations', thresholds: th([C.red, null], [C.amber, 30 * DAY], [C.green, 60 * DAY]) },
@@ -332,19 +333,20 @@ alertList('Alerts now', 'Firing and pending Prometheus alerts (monitoring/promet
 timeline('Alert history', 'When each alert was pending (amber: the condition is true but its "for" time has not passed yet) or firing (red) in the selected range, one line per alert.',
   [prom('max by (alertname, severity) (ALERTS{alertstate="firing"}) * 2 or max by (alertname, severity) (ALERTS{alertstate="pending"})', '{{alertname}} · {{severity}}')], pos(8, 14, 16, 7), ALERT_STATE,
   { noValue: 'No alerts in this period', thresholds: th([C.amber, null], [C.red, 2]) });
+row('Latency & traffic', 21);
 area('Public response time', 'Total time of each probe: the public pages through Cloudflare and the tunnel, and nginx answered directly (origin). Logarithmic axis, so both are readable; dashed line = 0.8 s (web.dev "good" TTFB). These are synthetic probes from this PC, not the latency of real visitors.',
-  [prom('max by (check) (probe_duration_seconds{job=~"blackbox_public|blackbox_origin", check!=""})', '{{check}}')], pos(0, 21, 12, 8), { unit: 's', fill: 6, log: true, thresholdLine: [0.8, C.amber] });
-area('Traffic through the tunnel', 'Every request that reached the site from the internet (visitors, bots and the public probes) by HTTP status class, from cloudflared, plus requests cloudflared could not deliver to nginx (red, should stay at 0). Visitors only: Analytics & Security.',
+  [prom('max by (check) (probe_duration_seconds{job=~"blackbox_public|blackbox_origin", check!=""})', '{{check}}')], pos(0, 22, 12, 8), { unit: 's', fill: 6, log: true, thresholdLine: [0.8, C.amber] });
+area('Traffic through the tunnel', 'Every request that reached the site from the internet (visitors, bots and the public probes) by HTTP status class, from cloudflared, plus requests cloudflared could not deliver to nginx (red, should stay at 0). Visitors only: the Visitors & security section below.',
   [prom('sum by (class) (label_replace(rate(cloudflared_tunnel_response_by_code[$__rate_interval]), "class", "${1}xx", "status_code", "(.)..")) * 3600', '{{class}}'),
-   prom('(rate(cloudflared_tunnel_request_errors[$__rate_interval]) + rate(cloudflared_proxy_connect_streams_errors[$__rate_interval])) * 3600')], pos(12, 21, 12, 8),
+   prom('(rate(cloudflared_tunnel_request_errors[$__rate_interval]) + rate(cloudflared_proxy_connect_streams_errors[$__rate_interval])) * 3600')], pos(12, 22, 12, 8),
   { unit: REQH, stack: true, fill: 22, overrides: byName(STATUS_COLORS), per: {
     1: [{ id: 'displayName', value: 'Proxy errors' }, { id: 'custom.stacking', value: { mode: 'none', group: 'errors' } }, { id: 'custom.fillOpacity', value: 0 }, { id: 'color', value: { mode: 'fixed', fixedColor: C.red } }],
-  } }).links = [goto('Analytics & Security', 'gfilho-analytics')];
-finish('gfilho.json', { uid: 'gfilho-overview', title: 'gfilho.net — Overview', refresh: '1m', annotations: [ANN.deploys, ANN.wsl],
-  description: 'Is gfilho.net reachable, fast and healthy: status, lifecycle, uptime, alerts, public latency and traffic' });
+  } });
 
-// ================================================================ 2. Analytics & Security
-board();
+// ================================================================ visitors & security (production access log)
+below();
+row('Visitors & security', 0);
+below();
 strip('Visitor traffic', 'Totals for the selected range, from the production access log, without the monitoring probes, automated tools and local previews (see Request sources). Requests count every response (pages, files, errors); Page views only pages answered 200 or 304. Data served = response bodies of all visitor requests (headers excluded). These are requests, not people: unique visitors cannot be counted reliably (and are not tracked). Log pipeline = probe lines received by Loki in the last 5 minutes; when it says NO LOGS the zeros here mean nothing.', [
   { name: 'Page views', q: loki(`sum(count_over_time(${BASE} ${VIEW} ${PAGE} [$__range])) or vector(0)`) },
   { name: 'Requests', q: loki(`sum(count_over_time(${BASE} [$__range])) or vector(0)`) },
@@ -355,7 +357,7 @@ strip('Visitor traffic', 'Totals for the selected range, from the production acc
   { name: 'Log pipeline', q: loki(`sum(count_over_time(${PROD} |= "gfilho-monitor" [5m])) or vector(0)`), thresholds: th([C.red, null], [C.green, 1]),
     mappings: [{ type: 'value', options: { 0: { text: 'NO LOGS', color: C.red, index: 0 } } }, { type: 'range', options: { from: 1, to: 1e12, result: { text: 'OK', color: C.green, index: 1 } } }] },
 ], pos(0, 0, 24, 4), { valueSize: 28 });
-area('Request sources', 'Every line of both access logs in exactly one group (stacked), as requests per hour: visitors, monitoring probes, automated tools (curl, scripts, headless browsers, link checkers), local previews and staging. Dashed: the total nginx counted (stub_status), which also includes the exporter\'s own status requests. Only "Visitors" feeds the figures on this dashboard.',
+area('Request sources', 'Every line of both access logs in exactly one group (stacked), as requests per hour: visitors, monitoring probes, automated tools (curl, scripts, headless browsers, link checkers), local previews and staging. Dashed: the total nginx counted (stub_status), which also includes the exporter\'s own status requests. Only "Visitors" feeds the other figures of this section.',
   [loki(`sum by (source) (rate({job="nginx", log="access"} ${PAT} ${SOURCE} [$__auto])) * 3600`, '{{source}}'), prom('rate(nginx_http_requests_total[$__rate_interval]) * 3600')], pos(0, 4, 12, 8),
   { unit: REQH, stack: true, fill: 26, interval: '15m', overrides: byName({ Visitors: C.green, 'Monitoring probes': C.grey, 'Automated tools': C.purple, 'Local previews': C.teal, Staging: C.blue }), per: {
     1: [{ id: 'displayName', value: 'nginx total (stub_status)' }, { id: 'custom.stacking', value: { mode: 'none', group: 'total' } }, { id: 'custom.fillOpacity', value: 0 }, { id: 'custom.lineStyle', value: { fill: 'dash', dash: [6, 4] } }, { id: 'color', value: { mode: 'fixed', fixedColor: C.neutral } }],
@@ -379,14 +381,9 @@ donut('Status mix', 'All visitor requests in the selected range by status class 
   `sum by (class) (count_over_time(${BASE} ${CLASS} [$__range]))`, 'class', pos(6, 29, 6, 8), STATUS_COLORS);
 rankTable('Unusual requests', 'Visitor requests worth a look: methods other than GET and HEAD, 5xx, and 4xx other than 404 (404s are in Top 404s). The path is shown exactly as requested, query string included. Open "Logs → Unusual requests · raw lines" for the full lines.',
   `topk(15, sum by (method, status, path) (count_over_time(${BASE} ${UNUSUAL} [$__range])))`, { method: 'Method', status: 'Status', path: 'Path (as requested)' }, pos(12, 29, 12, 8), 'Nothing unusual in this period');
-row('Logs', 37, { collapsed: true });
-logs('Recent visitor requests', 'Latest visitor requests to production, without monitoring probes and automated tools.', ACC, pos(0, 38, 24, 10));
-logs('Unusual requests · raw lines', 'The full access-log lines behind "Unusual requests".', `${ACC} ${PAT} ${UNUSUAL}`, pos(0, 48, 24, 10));
-finish('gfilho-analytics.json', { uid: 'gfilho-analytics', title: 'gfilho.net — Analytics & Security', refresh: '5m', annotations: [ANN.deploys],
-  description: 'Visitor traffic from the nginx access log: sources, status codes, errors, top pages, 404s, referrers, clients and unusual requests' });
 
-// ================================================================ 3. Infrastructure & Tunnel
-board();
+// ================================================================ infrastructure: services, tunnel, web server, host, publishing
+below();
 row('Services', 0);
 strip('Services now', 'systemd state of the hosting services (RUNNING, STOPPED or FAILED; NO DATA = node-exporter is not answering), units in a failed state, times systemd restarted nginx or cloudflared after a crash (Restart=on-failure) since WSL started, and how long WSL has been running.', [
   { name: 'nginx', q: prom(unitState('nginx.service')), mappings: SVC, thresholds: SVC_TH },
@@ -423,7 +420,7 @@ area('Edge link', 'Active tunnel connections (left axis, normal 4: dashed line) 
     1: [{ id: 'unit', value: 'ms' }, { id: 'custom.axisPlacement', value: 'right' }, { id: 'custom.axisLabel', value: 'RTT' }, { id: 'custom.fillOpacity', value: 0 }, { id: 'custom.lineWidth', value: 1 }],
   } });
 row('Web server & probes', 23);
-area('Request rate · nginx vs tunnel', 'Requests per hour counted by nginx on all its servers (production, staging, the monitoring probes and the exporter\'s own status requests) and by cloudflared (everything that came in from the internet). The visitor share is on Analytics & Security.',
+area('Request rate · nginx vs tunnel', 'Requests per hour counted by nginx on all its servers (production, staging, the monitoring probes and the exporter\'s own status requests) and by cloudflared (everything that came in from the internet). The visitor share is in the Visitors & security section.',
   [prom('rate(nginx_http_requests_total[$__rate_interval]) * 3600'), prom('rate(cloudflared_tunnel_total_requests[$__rate_interval]) * 3600')], pos(0, 24, 8, 8),
   { unit: REQH, names: ['nginx · all servers', 'Tunnel · from the internet'], legend: 'table', calcs: ['mean', 'max'] });
 area('nginx connections', 'Open client connections in nginx (stub_status): reading the request, writing the response, idle keep-alive.',
@@ -470,8 +467,10 @@ chips('Installed versions', 'Hosting components (refreshed every 2 minutes).', p
 row('Logs', 58, { collapsed: true });
 logs('nginx errors', 'nginx error.log. "open() failed" means a request for a file that does not exist (a 404).', '{job="nginx", log="error"}', pos(0, 59, 12, 10));
 logs('Service warnings', 'Warnings and errors from cloudflared, nginx, logrotate and the metrics timer (systemd journal).', '{job="systemd-journal"} |~ "(?i)(err|warn|fail)"', pos(12, 59, 12, 10));
-finish('gfilho-infra.json', { uid: 'gfilho-infra', title: 'gfilho.net — Infrastructure & Tunnel', refresh: '1m', annotations: [ANN.deploys, ANN.wsl, ANN.tunnel],
-  description: 'Diagnosis of the hosting: systemd services, Cloudflare Tunnel, nginx, probe phases, WSL host resources, publishing, backups and the monitoring pipeline' });
+logs('Recent visitor requests', 'Latest visitor requests to production, without monitoring probes and automated tools.', ACC, pos(0, 69, 24, 10));
+logs('Unusual requests · raw lines', 'The full access-log lines behind "Unusual requests".', `${ACC} ${PAT} ${UNUSUAL}`, pos(0, 79, 24, 10));
+finish('gfilho.json', { uid: 'gfilho-overview', title: 'gfilho.net — Monitoring', refresh: '1m', annotations: [ANN.deploys, ANN.wsl, ANN.tunnel],
+  description: 'gfilho.net on one page: status, lifecycle, uptime and alerts first, then latency and traffic, visitors and security, services, tunnel, web server, host, publishing and logs' });
 
 // ---------------------------------------------------------------- write
 const titles = new Set();
