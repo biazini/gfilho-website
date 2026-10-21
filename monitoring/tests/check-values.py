@@ -59,8 +59,14 @@ ASSET2 = re.compile(r".*\.(png|ico|svg|xml|txt|webmanifest|jpg|woff2|js|css|map)
 BOT = re.compile(r"(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan|python|go-http|wget).*")
 SELF = re.compile(r"^https?://(www\.)?gfilho\.net.*")
 rows = []
-with open("/var/log/nginx/access.log", encoding="utf-8", errors="replace") as f:
-    for line in f:
+def log_lines():
+    # the 24 h window spans the current log and the one logrotate rotated last night
+    for name in ("/var/log/nginx/access.log.1", "/var/log/nginx/access.log"):
+        if os.path.exists(name):
+            with open(name, encoding="utf-8", errors="replace") as f:
+                yield from f
+if True:
+    for line in log_lines():
         if NOISE.search(line):
             continue
         m = LINE.match(line)

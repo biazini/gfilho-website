@@ -183,9 +183,9 @@ function strip(title, description, items, gridPos, { valueSize = 30, titleSize =
   });
 }
 // Labels shown as small coloured chips (replaces short tables such as versions or edge locations).
-function chips(title, description, target, gridPos, color = C.green) {
+function chips(title, description, target, gridPos, color = C.green, transformations = []) {
   push({
-    type: 'stat', title, description, gridPos, transparent: true, datasource: target.datasource,
+    type: 'stat', title, description, gridPos, transparent: true, datasource: target.datasource, transformations,
     targets: refs([{ instant: true, range: false, ...target }]),
     fieldConfig: { defaults: { color: { mode: 'fixed', fixedColor: color }, thresholds: th([color, null]) }, overrides: [] },
     options: { reduceOptions: { calcs: ['lastNotNull'], fields: '', values: false }, colorMode: 'background', graphMode: 'none', textMode: 'name',
@@ -248,6 +248,12 @@ function alertList(title, description, gridPos) {
       showInstances: false, stateFilter: { firing: true, pending: true, noData: false, normal: false, error: true, recovering: true } },
   });
 }
+// Cloudflare names its data centres after the nearest airport (IATA code): show the city instead.
+const CITIES = { lis: 'Lisbon', opo: 'Porto', mad: 'Madrid', bcn: 'Barcelona', ams: 'Amsterdam', fra: 'Frankfurt', cdg: 'Paris', mrs: 'Marseille',
+  lhr: 'London', man: 'Manchester', dub: 'Dublin', bru: 'Brussels', dus: 'Düsseldorf', ham: 'Hamburg', muc: 'Munich', mxp: 'Milan', fco: 'Rome', zrh: 'Zurich',
+  gva: 'Geneva', vie: 'Vienna', prg: 'Prague', waw: 'Warsaw', cph: 'Copenhagen', arn: 'Stockholm', osl: 'Oslo', hel: 'Helsinki', ath: 'Athens', iad: 'Ashburn', ewr: 'Newark', gru: 'São Paulo' };
+const EDGE_NAMES = Object.entries(CITIES).map(([code, city]) => ({ id: 'renameByRegex', options: {
+  regex: '^Connection (\\d+) · ' + code + '(\\d+)$', renamePattern: 'Connection $1 → ' + city + ' (' + code.toUpperCase() + '$2)' } }));
 const FIRING = [{ type: 'range', options: { from: 1, to: 1e15, result: { text: 'Firing', color: C.red, index: 0 } } }];
 
 // ---------------------------------------------------------------- overview
@@ -262,16 +268,16 @@ strip('Health', 'Live state of the site. Site down but Origin up → Cloudflare 
   { name: 'Page views', q: loki(`sum(count_over_time(${BASE} ${VIEW} ${PAGE} [$__range]))`), noValue: '0' },
   { name: 'Data served', q: loki(`sum(sum_over_time(${BASE} | unwrap bytes | __error__="" [$__range]))`), unit: 'decbytes', noValue: '0 B' },
 ], pos(0, 1, 24, 4), { valueSize: 34 });
-strip('Lifecycle', 'Expiry dates, deploys and the WSL life cycle. Offline = time WSL was not running (from the systemd journal): the site was down then.', [
-  { name: 'TLS cert', q: prom(`max(probe_ssl_earliest_cert_expiry{${HOME}}) - time()`), unit: 'dtdurations', thresholds: th([C.red, null], [C.amber, 14 * DAY], [C.green, 30 * DAY]) },
-  { name: 'security.txt', q: prom('gfilho_security_txt_expires_timestamp_seconds - time()'), unit: 'dtdurations', thresholds: th([C.red, null], [C.amber, 30 * DAY], [C.green, 60 * DAY]) },
+strip('Lifecycle', 'TLS expires and sec.txt expires = time left until the TLS certificate and /.well-known/security.txt expire (renew security.txt before 30 days; Cloudflare renews the certificate). Offline = time WSL was not running (from the systemd journal): the site was down then.', [
+  { name: 'TLS expires', q: prom(`max(probe_ssl_earliest_cert_expiry{${HOME}}) - time()`), unit: 'dtdurations', thresholds: th([C.red, null], [C.amber, 14 * DAY], [C.green, 30 * DAY]) },
+  { name: 'sec.txt expires', q: prom('gfilho_security_txt_expires_timestamp_seconds - time()'), unit: 'dtdurations', thresholds: th([C.red, null], [C.amber, 30 * DAY], [C.green, 60 * DAY]) },
   { name: 'Last deploy', q: prom('time() - gfilho_last_deploy_timestamp_seconds{target="production"}'), unit: 'dtdurations' },
   { name: 'WSL uptime', q: prom('time() - node_boot_time_seconds'), unit: 'dtdurations' },
   { name: 'Offline 24 h', q: prom('gfilho_wsl_offline_seconds{window="24h"}'), unit: 'dtdurations', thresholds: th([C.green, null], [C.amber, 600], [C.red, 3600]) },
   { name: 'Offline 7 d', q: prom('gfilho_wsl_offline_seconds{window="7d"}'), unit: 'dtdurations', thresholds: th([C.green, null], [C.amber, 3600], [C.red, 6 * 3600]) },
   { name: 'Security updates', q: prom('gfilho_apt_upgradable{kind="security"}'), thresholds: th([C.green, null], [C.amber, 1], [C.red, 10]) },
   { name: 'Reboot', q: prom('gfilho_reboot_required'), mappings: map([[0, 'No', C.green], [1, 'Yes', C.amber]]), thresholds: th([C.green, null], [C.amber, 1]) },
-], pos(0, 5, 24, 3), { valueSize: 20, titleSize: 12 });
+], pos(0, 5, 24, 3), { valueSize: 17, titleSize: 11 });
 timeline('Uptime', 'Every check as one continuous status line. Green = OK, red = failing. Public pages every 60 s, origin and staging every 30 s, 301 redirects and DNS every 5 min. Blank = monitoring was not running.',
   [prom('probe_success{check!=""}', '{{check}}')], pos(0, 8, 24, 8), OKFAIL);
 top.at(-1).transparent = true;
@@ -337,8 +343,8 @@ area('Edge link', 'Active tunnel connections (normal 4, dashed line) and new reg
 area('nginx connections', 'Open connections in nginx (stub_status).',
   [prom('nginx_connections_active'), prom('nginx_connections_reading'), prom('nginx_connections_writing'), prom('nginx_connections_waiting')], pos(0, 68, 12, 7),
   { names: ['Active', 'Reading', 'Writing', 'Idle (keep-alive)'], decimals: 0 });
-chips('Edge locations', 'Cloudflare data centres the tunnel is connected to, one chip per connection.',
-  prom('cloudflared_tunnel_server_locations', '#{{connection_id}} · {{edge_location}}'), pos(12, 68, 12, 4), C.teal);
+chips('Tunnel → Cloudflare data centres', 'cloudflared keeps 4 connections open to the Cloudflare network for redundancy. Each chip shows the Cloudflare data centre one connection is attached to (named after the nearest airport: LIS = Lisbon, AMS = Amsterdam). Visitors reach the site through any of them; if one drops, the others keep it online.',
+  prom('cloudflared_tunnel_server_locations', 'Connection {{connection_id}} · {{edge_location}}'), pos(12, 68, 12, 4), C.teal, EDGE_NAMES);
 
 // ---------------------------------------------------------------- host
 row('Host · WSL', 75);

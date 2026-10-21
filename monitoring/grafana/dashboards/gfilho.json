@@ -590,7 +590,7 @@
       "id": 3,
       "type": "stat",
       "title": "Lifecycle",
-      "description": "Expiry dates, deploys and the WSL life cycle. Offline = time WSL was not running (from the systemd journal): the site was down then.",
+      "description": "TLS expires and sec.txt expires = time left until the TLS certificate and /.well-known/security.txt expire (renew security.txt before 30 days; Cloudflare renews the certificate). Offline = time WSL was not running (from the systemd journal): the site was down then.",
       "gridPos": {
         "x": 0,
         "y": 5,
@@ -718,7 +718,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "TLS cert"
+                "value": "TLS expires"
               },
               {
                 "id": "unit",
@@ -754,7 +754,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "security.txt"
+                "value": "sec.txt expires"
               },
               {
                 "id": "unit",
@@ -1016,8 +1016,8 @@
         "wideLayout": true,
         "showPercentChange": false,
         "text": {
-          "titleSize": 12,
-          "valueSize": 20
+          "titleSize": 11,
+          "valueSize": 17
         }
       }
     },
@@ -2973,8 +2973,8 @@
     {
       "id": 24,
       "type": "stat",
-      "title": "Edge locations",
-      "description": "Cloudflare data centres the tunnel is connected to, one chip per connection.",
+      "title": "Tunnel → Cloudflare data centres",
+      "description": "cloudflared keeps 4 connections open to the Cloudflare network for redundancy. Each chip shows the Cloudflare data centre one connection is attached to (named after the nearest airport: LIS = Lisbon, AMS = Amsterdam). Visitors reach the site through any of them; if one drops, the others keep it online.",
       "gridPos": {
         "x": 12,
         "y": 68,
@@ -2986,6 +2986,218 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · lis(\\d+)$",
+            "renamePattern": "Connection $1 → Lisbon (LIS$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · opo(\\d+)$",
+            "renamePattern": "Connection $1 → Porto (OPO$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · mad(\\d+)$",
+            "renamePattern": "Connection $1 → Madrid (MAD$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · bcn(\\d+)$",
+            "renamePattern": "Connection $1 → Barcelona (BCN$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · ams(\\d+)$",
+            "renamePattern": "Connection $1 → Amsterdam (AMS$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · fra(\\d+)$",
+            "renamePattern": "Connection $1 → Frankfurt (FRA$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · cdg(\\d+)$",
+            "renamePattern": "Connection $1 → Paris (CDG$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · mrs(\\d+)$",
+            "renamePattern": "Connection $1 → Marseille (MRS$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · lhr(\\d+)$",
+            "renamePattern": "Connection $1 → London (LHR$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · man(\\d+)$",
+            "renamePattern": "Connection $1 → Manchester (MAN$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · dub(\\d+)$",
+            "renamePattern": "Connection $1 → Dublin (DUB$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · bru(\\d+)$",
+            "renamePattern": "Connection $1 → Brussels (BRU$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · dus(\\d+)$",
+            "renamePattern": "Connection $1 → Düsseldorf (DUS$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · ham(\\d+)$",
+            "renamePattern": "Connection $1 → Hamburg (HAM$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · muc(\\d+)$",
+            "renamePattern": "Connection $1 → Munich (MUC$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · mxp(\\d+)$",
+            "renamePattern": "Connection $1 → Milan (MXP$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · fco(\\d+)$",
+            "renamePattern": "Connection $1 → Rome (FCO$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · zrh(\\d+)$",
+            "renamePattern": "Connection $1 → Zurich (ZRH$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · gva(\\d+)$",
+            "renamePattern": "Connection $1 → Geneva (GVA$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · vie(\\d+)$",
+            "renamePattern": "Connection $1 → Vienna (VIE$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · prg(\\d+)$",
+            "renamePattern": "Connection $1 → Prague (PRG$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · waw(\\d+)$",
+            "renamePattern": "Connection $1 → Warsaw (WAW$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · cph(\\d+)$",
+            "renamePattern": "Connection $1 → Copenhagen (CPH$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · arn(\\d+)$",
+            "renamePattern": "Connection $1 → Stockholm (ARN$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · osl(\\d+)$",
+            "renamePattern": "Connection $1 → Oslo (OSL$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · hel(\\d+)$",
+            "renamePattern": "Connection $1 → Helsinki (HEL$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · ath(\\d+)$",
+            "renamePattern": "Connection $1 → Athens (ATH$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · iad(\\d+)$",
+            "renamePattern": "Connection $1 → Ashburn (IAD$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · ewr(\\d+)$",
+            "renamePattern": "Connection $1 → Newark (EWR$2)"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^Connection (\\d+) · gru(\\d+)$",
+            "renamePattern": "Connection $1 → São Paulo (GRU$2)"
+          }
+        }
+      ],
       "targets": [
         {
           "refId": "A",
@@ -2996,7 +3208,7 @@
             "uid": "prometheus"
           },
           "expr": "cloudflared_tunnel_server_locations",
-          "legendFormat": "#{{connection_id}} · {{edge_location}}"
+          "legendFormat": "Connection {{connection_id}} · {{edge_location}}"
         }
       ],
       "fieldConfig": {
@@ -3882,6 +4094,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "transformations": [],
       "targets": [
         {
           "refId": "A",
