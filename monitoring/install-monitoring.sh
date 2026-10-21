@@ -17,10 +17,10 @@ curl -fsS -o /dev/null http://127.0.0.1:8090/stub_status \
 
 # 1. configuration
 install -d -m 755 "$dest"
-rsync -a --delete --chmod=D755,F644 \
+changed="$(rsync -ai --delete --chmod=D755,F644 \
   --exclude 'install-monitoring.sh' --exclude 'systemd/' --exclude 'textfile/' --exclude 'tests/' \
-  "$here/" "$dest/"
-echo "config:  $here -> $dest"
+  "$here/" "$dest/")"
+echo "config:  $here -> $dest ($(grep -c '^[<>c*]f' <<<"$changed" || true) files changed)"
 
 # 2. Grafana admin password, generated once
 install -d -m 700 /etc/gfilho-monitoring
@@ -39,16 +39,27 @@ systemctl start gfilho-metrics.service
 echo "metrics: $(grep -c '^gfilho_' /var/lib/gfilho-monitoring/textfile/gfilho.prom) gfilho_* samples"
 
 # 4. containers (restart: unless-stopped, so they come back with Docker when WSL starts)
-docker compose -f "$dest/docker-compose.yml" pull --quiet
-docker compose -f "$dest/docker-compose.yml" up -d --remove-orphans
+compose() { docker compose -f "$dest/docker-compose.yml" "$@"; }
+compose pull --quiet
+compose up -d --remove-orphans
+# "up" only recreates containers whose compose definition changed: apply changed config files as well
+if grep -q ' prometheus/' <<<"$changed"; then
+  compose exec -T prometheus promtool check config /etc/prometheus/prometheus.yml >/dev/null
+  compose kill -s HUP prometheus >/dev/null && echo "reload:  prometheus (scrape config and rules)"
+fi
+if grep -q ' blackbox/' <<<"$changed"; then compose kill -s HUP blackbox-exporter >/dev/null && echo "reload:  blackbox-exporter"; fi
+if grep -q ' alloy/' <<<"$changed"; then compose kill -s HUP alloy >/dev/null && echo "reload:  alloy"; fi
+if grep -q ' loki/' <<<"$changed"; then compose restart loki >/dev/null && echo "restart: loki"; fi
+if grep -q ' grafana/provisioning/' <<<"$changed"; then compose restart grafana >/dev/null && echo "restart: grafana (provisioning)"; fi
+# dashboards (grafana/dashboards/*.json) need nothing: Grafana reads that folder again every 60 s
 
 # 5. nothing may listen beyond loopback
 sleep 15
 ports='3000|3100|9091|9096|9100|9113|9115|12345'
 if ss -H -ltn | awk '{print $4}' | grep -E ":($ports)\$" | grep -vE '^(127\.0\.0\.1|\[::1\]):'; then
   echo "ERROR: a monitoring port listens beyond loopback (see above); stopping the stack" >&2
-  docker compose -f "$dest/docker-compose.yml" down
+  compose down
   exit 1
 fi
-docker compose -f "$dest/docker-compose.yml" ps --format 'table {{.Service}}\t{{.Status}}'
+compose ps --format 'table {{.Service}}\t{{.Status}}'
 echo "Grafana: http://localhost:3000"

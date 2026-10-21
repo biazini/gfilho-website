@@ -1,0 +1,1994 @@
+{
+  "uid": "gfilho-analytics",
+  "title": "gfilho.net — Analytics & Security",
+  "description": "Visitor traffic from the nginx access log: sources, status codes, errors, top pages, 404s, referrers, clients and unusual requests",
+  "tags": [
+    "gfilho.net",
+    "website"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "graphTooltip": 1,
+  "schemaVersion": 42,
+  "version": 4,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "5m",
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "weekStart": "",
+  "timepicker": {
+    "refresh_intervals": [
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h"
+    ]
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "enable": true,
+        "iconColor": "#5794F2",
+        "name": "Deploys",
+        "expr": "changes(gfilho_last_deploy_timestamp_seconds{target=\"production\"}[3m]) > 0",
+        "step": "1m",
+        "titleFormat": "Deploy to production",
+        "textFormat": "deploy.sh production"
+      }
+    ]
+  },
+  "links": [
+    {
+      "title": "gfilho.net dashboards",
+      "type": "dashboards",
+      "tags": [
+        "gfilho.net"
+      ],
+      "asDropdown": false,
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Alert rules",
+      "url": "/alerting/list",
+      "type": "link",
+      "targetBlank": false,
+      "icon": "bolt",
+      "keepTime": false
+    },
+    {
+      "title": "Live site",
+      "url": "https://gfilho.net/",
+      "type": "link",
+      "targetBlank": true,
+      "icon": "external link"
+    },
+    {
+      "title": "Runbook (README → Monitoring)",
+      "url": "https://github.com/biazini/gfilho-website#9-monitoring",
+      "type": "link",
+      "targetBlank": true,
+      "icon": "doc"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Visitor traffic",
+      "description": "Totals for the selected range, from the production access log, without the monitoring probes, automated tools and local previews (see Request sources). Requests count every response (pages, files, errors); Page views only pages answered 200 or 304. Data served = response bodies of all visitor requests (headers excluded). These are requests, not people: unique visitors cannot be counted reliably (and are not tracked). Log pipeline = probe lines received by Loki in the last 5 minutes; when it says NO LOGS the zeros here mean nothing.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "transparent": true,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page =~ `^/(cases/[a-z0-9-]+/)?$` [$__range])) or vector(0)",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` [$__range])) or vector(0)",
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(sum_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__range])) or vector(0)",
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" |= \"\\\" 404 \" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=\"404\" [$__range])) or vector(0)",
+          "legendFormat": ""
+        },
+        {
+          "refId": "E",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"5..\" [$__range])) or vector(0)",
+          "legendFormat": ""
+        },
+        {
+          "refId": "F",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "((sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"5..\" [$__range])) or vector(0)) / sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` [$__range]))) or vector(0)",
+          "legendFormat": ""
+        },
+        {
+          "refId": "G",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} |= \"gfilho-monitor\" [5m])) or vector(0)",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8AB8FF",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Page views"
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#8AB8FF",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "NO DATA",
+                        "color": "#8E8E8E",
+                        "index": 9
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "noValue",
+                "value": "NO DATA"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Requests"
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#8AB8FF",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "NO DATA",
+                        "color": "#8E8E8E",
+                        "index": 9
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "noValue",
+                "value": "NO DATA"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Data served"
+              },
+              {
+                "id": "unit",
+                "value": "decbytes"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#8AB8FF",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "NO DATA",
+                        "color": "#8E8E8E",
+                        "index": 9
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "noValue",
+                "value": "NO DATA"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "404 responses"
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#8AB8FF",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "NO DATA",
+                        "color": "#8E8E8E",
+                        "index": 9
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "noValue",
+                "value": "NO DATA"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "E"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "5xx responses"
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#73BF69",
+                      "value": null
+                    },
+                    {
+                      "color": "#F2495C",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "NO DATA",
+                        "color": "#8E8E8E",
+                        "index": 9
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "noValue",
+                "value": "NO DATA"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "F"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "5xx share"
+              },
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#73BF69",
+                      "value": null
+                    },
+                    {
+                      "color": "#F2495C",
+                      "value": 1e-9
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "NO DATA",
+                        "color": "#8E8E8E",
+                        "index": 9
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "noValue",
+                "value": "NO DATA"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "G"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Log pipeline"
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#F2495C",
+                      "value": null
+                    },
+                    {
+                      "color": "#73BF69",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "NO LOGS",
+                        "color": "#F2495C",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "range",
+                    "options": {
+                      "from": 1,
+                      "to": 1000000000000,
+                      "result": {
+                        "text": "OK",
+                        "color": "#73BF69",
+                        "index": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "NO DATA",
+                        "color": "#8E8E8E",
+                        "index": 9
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "noValue",
+                "value": "NO DATA"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 28
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Request sources",
+      "description": "Every line of both access logs in exactly one group (stacked), as requests per hour: visitors, monitoring probes, automated tools (curl, scripts, headless browsers, link checkers), local previews and staging. Dashed: the total nginx counted (stub_status), which also includes the exporter's own status requests. Only \"Visitors\" feeds the figures on this dashboard.",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "interval": "15m",
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (source) (rate({job=\"nginx\", log=\"access\"} | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | label_format source=`{{ if eq .env \"staging\" }}Staging{{ else if contains \"gfilho-monitor\" .agent }}Monitoring probes{{ else if gt (__line__ | count \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\") 0 }}Automated tools{{ else if gt (count \"^https?://(localhost|127[.]0[.]0[.]1)([:/].*)?$\" .referer) 0 }}Local previews{{ else }}Visitors{{ end }}` [$__auto])) * 3600",
+          "legendFormat": "{{source}}"
+        },
+        {
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(nginx_http_requests_total[$__rate_interval]) * 3600",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: req/h",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1.5,
+            "fillOpacity": 26,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "barAlignment": 0,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "axisGridShow": true,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Visitors"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Monitoring probes"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8E8E8E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Automated tools"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Local previews"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#2BC4B4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Staging"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "nginx total (stub_status)"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none",
+                  "group": "total"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8AB8FF"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Visitor responses by status class",
+      "description": "Visitor requests per hour by HTTP status class (15-minute buckets). 4xx spikes are usually bots probing for files that do not exist (see Top 404s).",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "interval": "15m",
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (class) (rate({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | label_format class=`{{ substr 0 1 .status }}xx` [$__auto])) * 3600",
+          "legendFormat": "{{class}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: req/h",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1.5,
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "barAlignment": 0,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "axisGridShow": true,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Error share",
+      "description": "Share of visitor requests in the previous hour that ended in 404, another 4xx or a 5xx (rolling 1-hour window). A static site should never answer 5xx; 404s are mostly scanners.",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "interval": "15m",
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (kind) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"4..|5..\" | label_format kind=`{{ if eq .status \"404\" }}404 not found{{ else if hasPrefix \"5\" .status }}5xx server error{{ else }}Other 4xx{{ end }}` [1h])) / ignoring(kind) group_left sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` [1h]))",
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1.5,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "barAlignment": 0,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "axisGridShow": true,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "404 not found"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Other 4xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx server error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Data served",
+      "description": "Response-body bytes per second sent to visitors: pages, files and error pages (headers excluded), 15-minute buckets. Same scope as Requests, so it is not limited to page views.",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "interval": "15m",
+      "targets": [
+        {
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(rate({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__auto]))",
+          "legendFormat": "Bytes"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1.5,
+            "fillOpacity": 24,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "barAlignment": 0,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisBorderShow": false,
+            "axisPlacement": "auto",
+            "axisGridShow": true,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "barchart",
+      "title": "Top pages",
+      "description": "The 10 most requested paths answered 200 or 304, without CSS, JS, images and technical files (query strings removed).",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(10, sum by (page) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page !~ `^/(assets|cdn-cgi)/.*` | page !~ `.*\\.(png|ico|svg|xml|txt|webmanifest|jpg|woff2|js|css|map)$` [$__range])))",
+          "legendFormat": "{{page}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "page": "Page",
+              "Value #A": "Requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#73BF69"
+          },
+          "min": 0,
+          "decimals": 0,
+          "noValue": "No requests in this period",
+          "custom": {
+            "fillOpacity": 75,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "axisBorderShow": false,
+            "axisGridShow": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xField": "Page",
+        "showValue": "always",
+        "barWidth": 0.45,
+        "groupWidth": 0.7,
+        "barRadius": 0.2,
+        "stacking": "none",
+        "xTickLabelRotation": 0,
+        "xTickLabelMaxLength": 42,
+        "fullHighlight": false,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "barchart",
+      "title": "Top 404s",
+      "description": "Requested paths that do not exist (query strings removed). Mostly bots looking for WordPress, .env files and similar: harmless here, none of it exists.",
+      "gridPos": {
+        "x": 8,
+        "y": 20,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(10, sum by (page) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" |= \"\\\" 404 \" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=\"404\" [$__range])))",
+          "legendFormat": "{{page}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "page": "Path",
+              "Value #A": "Requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF9830"
+          },
+          "min": 0,
+          "decimals": 0,
+          "noValue": "No requests in this period",
+          "custom": {
+            "fillOpacity": 75,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "axisBorderShow": false,
+            "axisGridShow": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xField": "Path",
+        "showValue": "always",
+        "barWidth": 0.45,
+        "groupWidth": 0.7,
+        "barRadius": 0.2,
+        "stacking": "none",
+        "xTickLabelRotation": 0,
+        "xTickLabelMaxLength": 42,
+        "fullHighlight": false,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "barchart",
+      "title": "Top referrers",
+      "description": "Where page views came from (links from the site itself are left out).",
+      "gridPos": {
+        "x": 16,
+        "y": 20,
+        "w": 8,
+        "h": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(10, sum by (referer) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page =~ `^/(cases/[a-z0-9-]+/)?$` | referer != \"-\" | referer !~ `https?://(www\\.)?gfilho\\.net.*` [$__range])))",
+          "legendFormat": "{{referer}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "referer": "Referrer",
+              "Value #A": "Requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          },
+          "min": 0,
+          "decimals": 0,
+          "noValue": "No requests in this period",
+          "custom": {
+            "fillOpacity": 75,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "axisBorderShow": false,
+            "axisGridShow": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xField": "Referrer",
+        "showValue": "always",
+        "barWidth": 0.45,
+        "groupWidth": 0.7,
+        "barRadius": 0.2,
+        "stacking": "none",
+        "xTickLabelRotation": 0,
+        "xTickLabelMaxLength": 42,
+        "fullHighlight": false,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "piechart",
+      "title": "Clients",
+      "description": "Page views by client type, a heuristic on the User-Agent with three exclusive groups. Bots & tools: declared bots, crawlers, scanners, link previews, HTTP libraries and any User-Agent with a URL in it. Browsers: looks like a real browser (scanners can fake this, so it is an upper bound for people). Unclassified: anything else.",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "transparent": true,
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (client) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page =~ `^/(cases/[a-z0-9-]+/)?$` | label_format client=`{{ if gt (count \"(?i)(bot|crawl|spider|slurp|scan|preview|feed|monitor|checker|validator|measurement|dataprovider|heritrix|archiver|python|go-http|wget|curl|okhttp|java/|libwww|httpx|aiohttp|axios|node-fetch|undici|^node$|headless|phantom|https?://)\" .agent) 0 }}Bots & tools{{ else if gt (count \"^Mozilla/5[.]0 [(](Windows|Macintosh|X11|Linux|iPhone|iPad|Android)[^)]*[)].*(Chrome|Firefox|Safari|Edg|OPR)/[0-9]\" .agent) 0 }}Browsers{{ else }}Unclassified{{ end }}` [$__range]))",
+          "legendFormat": "{{client}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "client",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Value #A",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "No requests in this period"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Browsers"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bots & tools"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8E8E8E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unclassified"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "piechart",
+      "title": "Status mix",
+      "description": "All visitor requests in the selected range by status class (same colours as above).",
+      "gridPos": {
+        "x": 6,
+        "y": 29,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "transparent": true,
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (class) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | label_format class=`{{ substr 0 1 .status }}xx` [$__range]))",
+          "legendFormat": "{{class}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "class",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Value #A",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "No requests in this period"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Unusual requests",
+      "description": "Visitor requests worth a look: methods other than GET and HEAD, 5xx, and 4xx other than 404 (404s are in Top 404s). The path is shown exactly as requested, query string included. Open \"Logs → Unusual requests · raw lines\" for the full lines.",
+      "gridPos": {
+        "x": 12,
+        "y": 29,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(15, sum by (method, status, path) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | (status=~\"4..\" and status!=\"404\") or status=~\"5..\" or method!~\"GET|HEAD\" [$__range])))",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "method": 0,
+              "status": 1,
+              "path": 2,
+              "Value #A": 3
+            },
+            "renameByName": {
+              "method": "Method",
+              "status": "Status",
+              "path": "Path (as requested)",
+              "Value #A": "Requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Nothing unusual in this period",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requests"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Method"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Logs",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 13,
+          "type": "logs",
+          "title": "Recent visitor requests",
+          "description": "Latest visitor requests to production, without monitoring probes and automated tools.",
+          "gridPos": {
+            "x": 0,
+            "y": 38,
+            "w": 24,
+            "h": 10
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "{job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\"",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false
+          }
+        },
+        {
+          "id": 14,
+          "type": "logs",
+          "title": "Unusual requests · raw lines",
+          "description": "The full access-log lines behind \"Unusual requests\".",
+          "gridPos": {
+            "x": 0,
+            "y": 48,
+            "w": 24,
+            "h": 10
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "{job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | (status=~\"4..\" and status!=\"404\") or status=~\"5..\" or method!~\"GET|HEAD\"",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false
+          }
+        }
+      ]
+    }
+  ]
+}

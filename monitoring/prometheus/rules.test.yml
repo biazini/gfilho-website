@@ -1,0 +1,189 @@
+# Unit tests for rules.yml and for the dashboard expressions whose logic is not obvious, with synthetic
+# series (nothing touches the running Prometheus data). Run inside WSL after install-monitoring.sh:
+#   docker exec gfilho-monitoring-prometheus-1 promtool test rules /etc/prometheus/rules.test.yml
+rule_files: [rules.yml]
+evaluation_interval: 30s
+
+tests:
+  # SiteDown: pending for the first 2 minutes of failures, then firing with the page in its labels
+  - interval: 1m
+    input_series:
+      - series: 'probe_success{job="blackbox_public", instance="https://gfilho.net/", check="Public · Home page"}'
+        values: '1 1 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: SiteDown
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: SiteDown
+        exp_alerts:
+          - exp_labels: { severity: critical, component: site, job: blackbox_public, instance: "https://gfilho.net/", check: "Public · Home page" }
+            exp_annotations: { summary: "Public page not answering 200: https://gfilho.net/" }
+
+  # A dead blackbox exporter leaves no probe_success, so SiteDown cannot fire: ScrapeTargetDown covers that gap
+  - interval: 1m
+    input_series:
+      - series: 'up{job="blackbox_public", instance="https://gfilho.net/"}'
+        values: '1 0x10'
+      - series: 'probe_success{job="blackbox_public", instance="https://gfilho.net/"}'
+        values: '1 stale'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: SiteDown
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: ScrapeTargetDown
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: ScrapeTargetDown
+        exp_alerts:
+          - exp_labels: { severity: warning, component: monitoring, job: blackbox_public }
+            exp_annotations: { summary: "Prometheus cannot scrape blackbox_public: the alerts that use it cannot fire" }
+
+  # cloudflared not answering is TunnelDown (critical) only, not also ScrapeTargetDown
+  - interval: 1m
+    input_series:
+      - series: 'up{job="cloudflared", instance="127.0.0.1:20241"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: TunnelDown
+        exp_alerts:
+          - exp_labels: { severity: critical, component: tunnel, job: cloudflared, instance: "127.0.0.1:20241" }
+            exp_annotations: { summary: "Cloudflare Tunnel has no edge connections" }
+      - eval_time: 8m
+        alertname: ScrapeTargetDown
+        exp_alerts: []
+
+  # the metrics timer stopped at t=0: stale after 10 minutes, firing 5 minutes later
+  - interval: 1m
+    input_series:
+      - series: 'gfilho_metrics_last_run_timestamp_seconds'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: CustomMetricsStale
+        exp_alerts: []
+      - eval_time: 17m
+        alertname: CustomMetricsStale
+        exp_alerts:
+          - exp_labels: { severity: warning, component: monitoring }
+            exp_annotations: { summary: "gfilho-metrics.timer has not run for 10 minutes: security.txt, updates, backups and WSL figures are stale" }
+
+  # a timer that keeps running never trips it
+  - interval: 1m
+    input_series:
+      - series: 'gfilho_metrics_last_run_timestamp_seconds'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: CustomMetricsStale
+        exp_alerts: []
+
+  # C: with 5 % free
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/mnt/c"}'
+        values: '5x20'
+      - series: 'node_filesystem_size_bytes{mountpoint="/mnt/c"}'
+        values: '100x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HostDriveAlmostFull
+        exp_alerts: []
+      - eval_time: 17m
+        alertname: HostDriveAlmostFull
+        exp_alerts:
+          - exp_labels: { severity: warning, component: host, mountpoint: "/mnt/c" }
+            exp_annotations: { summary: "Windows drive C: (holds the WSL virtual disk) has less than 10 % free" }
+
+  # ---------------------------------------------------------------- dashboard expressions
+  # "WSL starts" annotation: WSL ran from 0 to 10 min, was off, booted again at 60 min (3600 s).
+  # The old changes()-based query never sees a boot (no samples from before it); the new one marks 10 minutes.
+  - interval: 1m
+    input_series:
+      - series: 'node_boot_time_seconds'
+        values: '0x10 _x50 3600x20'
+    promql_expr_test:
+      - expr: changes(node_boot_time_seconds[3m]) > 0
+        eval_time: 62m
+        exp_samples: []
+      - expr: time() - node_boot_time_seconds < 600
+        eval_time: 62m
+        exp_samples:
+          - labels: '{}'
+            value: 120
+      - expr: time() - node_boot_time_seconds < 600
+        eval_time: 75m
+        exp_samples: []
+
+  # "Deploys" annotation: the deploy timestamp changes at 6 min
+  - interval: 1m
+    input_series:
+      - series: 'gfilho_last_deploy_timestamp_seconds{target="production"}'
+        values: '100x5 400x5'
+    promql_expr_test:
+      - expr: changes(gfilho_last_deploy_timestamp_seconds{target="production"}[3m]) > 0
+        eval_time: 7m
+        exp_samples:
+          - labels: '{target="production"}'
+            value: 1
+
+  # Overview "Public site": 1 UP, 0.5 UNKNOWN (target not scraped), 0 DOWN; DOWN wins over UNKNOWN
+  - interval: 1m
+    input_series:
+      - series: 'up{job="blackbox_public", instance="a"}'
+        values: '1 1 1'
+      - series: 'up{job="blackbox_public", instance="b"}'
+        values: '1 0 0'
+      - series: 'probe_success{job="blackbox_public", instance="a"}'
+        values: '1 1 0'
+      - series: 'probe_success{job="blackbox_public", instance="b"}'
+        values: '1 stale'
+    promql_expr_test:
+      - expr: min(probe_success{job="blackbox_public"} or up{job="blackbox_public"} * 0 + 0.5)
+        eval_time: 0m
+        exp_samples: [{ labels: '{}', value: 1 }]
+      - expr: min(probe_success{job="blackbox_public"} or up{job="blackbox_public"} * 0 + 0.5)
+        eval_time: 1m
+        exp_samples: [{ labels: '{}', value: 0.5 }]
+      - expr: min(probe_success{job="blackbox_public"} or up{job="blackbox_public"} * 0 + 0.5)
+        eval_time: 2m
+        exp_samples: [{ labels: '{}', value: 0 }]
+
+  # Infrastructure "Services now" (1 running, 0 stopped, -1 failed) and "Service history" (worst state in a cell)
+  - interval: 1m
+    input_series:
+      - series: 'node_systemd_unit_state{name="nginx.service", state="active"}'
+        values: '1 1 0 1 1 1 1 1 1 1 0'
+      - series: 'node_systemd_unit_state{name="nginx.service", state="failed"}'
+        values: '0 0 0 0 0 0 0 0 0 0 1'
+    promql_expr_test:
+      - expr: sum(node_systemd_unit_state{name="nginx.service", state="active"}) - sum(node_systemd_unit_state{name="nginx.service", state="failed"})
+        eval_time: 5m
+        exp_samples: [{ labels: '{}', value: 1 }]
+      - expr: sum(node_systemd_unit_state{name="nginx.service", state="active"}) - sum(node_systemd_unit_state{name="nginx.service", state="failed"})
+        eval_time: 10m
+        exp_samples: [{ labels: '{}', value: -1 }]
+      # the 2-minute stop is inside the 5-minute cell ending at 5m: the cell shows STOPPED, not RUNNING
+      - expr: min by (name) (min_over_time(node_systemd_unit_state{state="active"}[5m])) - max by (name) (max_over_time(node_systemd_unit_state{state="failed"}[5m]))
+        eval_time: 5m
+        exp_samples: [{ labels: '{name="nginx.service"}', value: 0 }]
+
+  # Overview "Alert history": one line per alert, firing (2) wins over pending (1)
+  - interval: 1m
+    input_series:
+      - series: 'ALERTS{alertname="SiteDown", alertstate="firing", severity="critical", instance="x"}'
+        values: '1'
+      - series: 'ALERTS{alertname="SiteDown", alertstate="pending", severity="critical", instance="y"}'
+        values: '1'
+      - series: 'ALERTS{alertname="RedirectBroken", alertstate="pending", severity="warning", instance="z"}'
+        values: '1'
+    promql_expr_test:
+      - expr: max by (alertname, severity) (ALERTS{alertstate="firing"}) * 2 or max by (alertname, severity) (ALERTS{alertstate="pending"})
+        eval_time: 0m
+        exp_samples:
+          - labels: '{alertname="SiteDown", severity="critical"}'
+            value: 2
+          - labels: '{alertname="RedirectBroken", severity="warning"}'
+            value: 1

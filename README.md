@@ -120,9 +120,10 @@ Cache lifetimes depend on the path:
 │   ├── nginx/                   Server blocks, security headers, cache rules, redirects, stub_status
 │   └── systemd/                 nginx drop-in: restart automatically if it dies
 ├── monitoring/                  Prometheus, Loki, Alloy, exporters and Grafana (Docker Compose)
-│   ├── install-monitoring.sh    Install or update the stack (run as root in WSL)
-│   ├── grafana/build-dashboard.mjs  Source of the dashboard; writes grafana/dashboards/gfilho.json
-│   └── tests/                   check-queries.py and check-values.py: validate the dashboard
+│   ├── install-monitoring.sh    Install or update the stack and reload what changed (run as root in WSL)
+│   ├── grafana/build-dashboard.mjs  Source of the three dashboards; writes grafana/dashboards/*.json
+│   ├── prometheus/rules.test.yml    promtool unit tests for the alert rules and dashboard expressions
+│   └── tests/                   check-queries.py, check-values.py, query-timings.py: validate the dashboards
 ├── docs/architecture/           Diagrams: draw.io sources and PNG exports
 ├── tools/
 │   ├── build-images.ps1         Regenerate og-image.png, the icons and favicon.ico with headless Chrome
@@ -241,10 +242,11 @@ For a full audit, run [Lighthouse](https://developer.chrome.com/docs/lighthouse)
 
 ## 9. Monitoring
 
-A local stack watches the site, the tunnel and the WSL host, and shows everything on one Grafana dashboard. Grafana opens at **<http://localhost:3000>** on this PC, read-only and without a login. The admin password is generated on the first install and is stored only in `/etc/gfilho-monitoring/grafana.env` (`sudo cat` it in WSL).
+A local stack watches the site, the tunnel and the WSL host, and shows it on three Grafana dashboards. Grafana opens at **<http://localhost:3000>** on this PC, read-only and without a login. The admin password is generated on the first install and is stored only in `/etc/gfilho-monitoring/grafana.env` (`sudo cat` it in WSL).
 
 ```bash
-# install or update (copies monitoring/ to /opt/gfilho-monitoring and starts the containers)
+# install or update: copies monitoring/ to /opt/gfilho-monitoring, starts the containers and
+# reloads Prometheus, blackbox-exporter, Alloy, Loki or Grafana when their files changed
 bash monitoring/install-monitoring.sh
 ```
 
@@ -253,36 +255,46 @@ bash monitoring/install-monitoring.sh
 | Prometheus | 9091 | Metrics, 30 days; alert rules in `monitoring/prometheus/rules.yml` |
 | blackbox-exporter | 9115 | Probes of the public pages (every 60 s), the origin and staging, the 301 redirects and DNS |
 | nginx-prometheus-exporter | 9113 | Connections and requests from nginx `stub_status` (`127.0.0.1:8090`) |
-| node-exporter | 9100 | CPU, memory, disk, network, systemd units, and the custom `gfilho_*` metrics |
+| node-exporter | 9100 | CPU, memory, pressure (PSI), disk (the WSL disk and the Windows drive C: that holds it), network, systemd units, and the custom `gfilho_*` metrics |
 | `gfilho-metrics.timer` | — | Every 2 min: security.txt expiry, last deploy, backups, WSL offline time, pending updates, component versions |
 | `cloudflared` | 20241 | Tunnel connections, requests, errors and QUIC latency (built into cloudflared) |
 | Loki + Alloy | 3100 | nginx access and error logs, and the journal of nginx, cloudflared and logrotate; 14 days |
-| Grafana | 3000 | The dashboard `gfilho.net — Monitoring` |
+| Grafana | 3000 | The three dashboards below, in the `gfilho.net` folder |
 
-The dashboard has seven sections:
+The dashboards are provisioned from files and read-only in Grafana; links at the top of each one lead to the others (keeping the time range), to the alert rules and to this section.
 
-| Section | What it shows |
-|---|---|
-| Overview | Two borderless status strips (Health: site, origin, tunnel, latency, availability, alerts, page views, data served · Lifecycle: TLS and security.txt expiry, last deploy, WSL uptime and downtime, updates, reboot) and one continuous **Uptime** line with every check |
-| Alerts | Grafana's native alert list (firing and pending Prometheus rules) and an alert history timeline |
-| Latency | Response time by phase and public vs origin, as smooth areas |
-| Traffic · production | Responses by status class, requests per second, top pages / 404s / referrers as bar charts, humans vs bots, status mix, bytes served |
-| Tunnel & web server | Tunnel traffic with its error rates, the edge link (connections with QUIC latency on a second axis), nginx connections, edge locations and versions as chips |
-| Host · WSL | Services as a status-history grid, automatic restarts, CPU & disk, memory, network, publishing strip |
-| Logs (collapsed) | nginx errors, service warnings and recent requests |
+| Dashboard (uid) | Refresh | Question it answers | What it shows |
+|---|---|---|---|
+| **Overview** (`gfilho-overview`, the home page) | 1 min | Is the site reachable, fast and healthy right now? | Status strip (public site, origin, tunnel links, response time, p95, availability, monitored share of the range, alerts firing) · lifecycle strip (TLS and security.txt expiry, last deploy, WSL offline 24 h and 7 d) · one uptime line per check · alerts now and alert history (pending and firing) · public response time (log scale) · traffic through the tunnel by status class with proxy errors |
+| **Analytics & Security** (`gfilho-analytics`) | 5 min | Who uses the site, what fails, what probes it? | Visitor totals (page views, requests, data served, 404, 5xx, 5xx share, log pipeline) · request sources (visitors, probes, tools, local previews, staging, against the nginx total) · responses by status class · error share · data served · top pages, 404s and referrers · clients · status mix · unusual requests · logs (collapsed) |
+| **Infrastructure & Tunnel** (`gfilho-infra`) | 1 min | Where is the problem? | Services now and their history · tunnel state, data centres, responses by code, edge link · nginx vs tunnel request rate, nginx connections, probe phases · CPU & memory, memory, pressure (PSI), disk space (WSL disk and C:), network · publishing & backups, monitoring pipeline, maintenance, versions · logs (collapsed) |
 
-Deploys and WSL starts are marked on the charts. A page view is a request to `/` or `/cases/*/` answered `200` (or `304` from the browser cache), without the monitoring probes (User-Agent `gfilho-monitor`), automated tools or local previews. The logs do not record visitor IP addresses, so there are no "unique visitor" figures.
+How to read them:
 
-**Changing the dashboard.** Edit `monitoring/grafana/build-dashboard.mjs`, regenerate the JSON with `node monitoring/grafana/build-dashboard.mjs monitoring/grafana/dashboards/gfilho.json`, and run the installer again. Then check it with the two scripts in `monitoring/tests/` (inside WSL, with the stack running):
+- **States.** `UP`/`DOWN` come from the probes; `UNKNOWN` means Prometheus cannot reach the probe exporter, and `NO DATA` (grey) means there is no sample at all. A missing value is never shown as zero or as healthy.
+- **Availability** counts only the time monitoring was running; **Monitored** says how much of the selected range that was. Both are needed: with WSL off there are no probes at all.
+- **p95** is the 95th percentile of the probe samples (one a minute, from this PC through Cloudflare), not the latency of real visitors. nginx records `request_time` for real requests, but it is 0 ms for 99 % of them (static files), so it is not charted.
+- **Latency colours** follow the web.dev TTFB guidance: good up to 0.8 s, poor above 1.8 s. The probe time includes DNS, connect, TLS and the whole response, so it is never faster than TTFB.
+- **Request rates** are in requests per hour everywhere, so the nginx, tunnel and log figures compare directly.
+- **Visitors** are the lines of the production access log without the monitoring probes (User-Agent `gfilho-monitor`), automated tools (curl, scripts, headless browsers, the self-audit link checker) and local previews. A page view is a visitor request to `/` or `/cases/*/` answered `200` (or `304` from the browser cache). **Clients** splits page views by User-Agent into Bots & tools, Browsers and Unclassified (exclusive groups; a scanner can pretend to be a browser, so Browsers is an upper bound for people). The logs do not record visitor IP addresses, so there are no "unique visitor" figures.
+- **Annotations:** deploys (all dashboards), WSL starts (the 10 minutes after each boot) and tunnel (re)registrations (Infrastructure).
+
+**Alerts.** `monitoring/prometheus/rules.yml` has 16 rules. Besides the site, tunnel and host rules, `ScrapeTargetDown` and `CustomMetricsStale` fire when the data an alert depends on stops arriving (a rule such as `SiteDown` cannot fire without probe results), and `HostDriveAlmostFull` watches C:, the real limit of the WSL virtual disk. There is no Alertmanager: the Overview's alert list is the notification.
+
+**Changing the dashboards.** Edit `monitoring/grafana/build-dashboard.mjs`, regenerate the JSON with `node monitoring/grafana/build-dashboard.mjs monitoring/grafana/dashboards` (the build stops on overlapping panels, duplicate titles or ids, unknown panel types and localhost links), and run the installer again. Then check them inside WSL, with the stack running:
 
 ```bash
-# every panel query runs through Grafana without errors and returns data
+# alert rules and the trickier dashboard expressions, against synthetic data
+docker exec gfilho-monitoring-prometheus-1 promtool test rules /etc/prometheus/rules.test.yml
+# every query of every dashboard runs through Grafana for 1 h, 24 h and 7 d without errors
 python3 monitoring/tests/check-queries.py
-# the values match independent sources (access log, cloudflared, openssl, /proc, df, journal)
+# the values match independent sources (access logs, Prometheus and cloudflared APIs, openssl, systemctl, /proc, df, journal)
 sudo python3 monitoring/tests/check-values.py
+# how long each query takes and how much log data it reads (write a JSON to compare before/after)
+python3 monitoring/tests/query-timings.py /tmp/timings.json
 ```
 
-The stack runs inside the same WSL as the site, so it can only show when the site was down **after** WSL comes back. Nothing here can send a notification while the PC is off. For that, add an external uptime monitor for `https://gfilho.net/` (for example a free HTTP monitor with email alerts) and the tunnel health notification in Cloudflare.
+**When the PC is off.** The stack runs inside the same WSL as the site, so it can only show that the site was down **after** WSL comes back (the uptime line has a gap, *Monitored* drops below 100 %, *WSL offline* grows). The probes also leave from this PC, so a local network fault looks like an outage. Nothing here can send a notification while the PC is off. For that, add an external uptime monitor for `https://gfilho.net/` (for example a free HTTP monitor with email alerts) and the tunnel health notification in Cloudflare.
 
 The containers restart with Docker when WSL starts. To stop the stack: `docker compose -f /opt/gfilho-monitoring/docker-compose.yml down` (add `-v` to delete the stored metrics and logs).
 

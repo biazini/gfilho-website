@@ -56,7 +56,8 @@ services:
       - --collector.systemd.unit-include=(nginx|cloudflared|docker|logrotate|gfilho-metrics)\.(service|timer)
       - --collector.systemd.enable-restarts-metrics
       - --collector.textfile.directory=/host/var/lib/gfilho-monitoring/textfile
-      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|mnt|usr/lib/wsl|var/lib/docker/.+|var/lib/kubelet/.+|var/lib/rancher/.+)($$|/)
+      # /mnt/c stays in: the WSL virtual disk is a file on C:, so C: is the real space limit; other /mnt mounts are out
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|mnt/[^c].*|mnt/c.+|usr/lib/wsl|var/lib/docker/.+|var/lib/kubelet/.+|var/lib/rancher/.+)($$|/)
     volumes:
       - /:/host:ro   # WSL's root is a private mount, so rslave is not available
       - /run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro

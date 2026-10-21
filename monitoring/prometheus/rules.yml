@@ -1,6 +1,7 @@
-# Alert rules for gfilho.net. There is no Alertmanager: firing alerts are shown on the Grafana
-# dashboard ("Active alerts"). For notifications while the whole PC is off, use an external
-# uptime monitor as well (see README, "Monitoring").
+# Alert rules for gfilho.net. There is no Alertmanager: firing and pending alerts are shown on the
+# Grafana Overview dashboard ("Alerts now", "Alert history"). For notifications while the whole PC is
+# off, use an external uptime monitor as well (see README, "Monitoring").
+# Unit tests: rules.test.yml (promtool, see README).
 groups:
   - name: gfilho-site
     rules:
@@ -78,8 +79,31 @@ groups:
         labels: { severity: warning, component: host }
         annotations: { summary: "WSL disk has less than 10 % free" }
 
+      # The WSL virtual disk ("/" above, 1 TB) is a file on C: and can only grow while C: has room.
+      - alert: HostDriveAlmostFull
+        expr: node_filesystem_avail_bytes{mountpoint="/mnt/c"} / node_filesystem_size_bytes{mountpoint="/mnt/c"} < 0.10
+        for: 15m
+        labels: { severity: warning, component: host }
+        annotations: { summary: "Windows drive C: (holds the WSL virtual disk) has less than 10 % free" }
+
       - alert: SecurityUpdatesPending
         expr: gfilho_apt_upgradable{kind="security"} > 0
         for: 3d
         labels: { severity: info, component: host }
         annotations: { summary: "Security updates pending for more than 3 days" }
+
+  # Rules above stop evaluating silently when their data disappears (probe_success == 0 has no result
+  # when the blackbox exporter is down). These two make that visible.
+  - name: gfilho-monitoring
+    rules:
+      - alert: ScrapeTargetDown
+        expr: count by (job) (up{job!="cloudflared"} == 0)     # cloudflared is covered by TunnelDown
+        for: 5m
+        labels: { severity: warning, component: monitoring }
+        annotations: { summary: "Prometheus cannot scrape {{ $labels.job }}: the alerts that use it cannot fire" }
+
+      - alert: CustomMetricsStale
+        expr: time() - gfilho_metrics_last_run_timestamp_seconds > 600
+        for: 5m
+        labels: { severity: warning, component: monitoring }
+        annotations: { summary: "gfilho-metrics.timer has not run for 10 minutes: security.txt, updates, backups and WSL figures are stale" }
