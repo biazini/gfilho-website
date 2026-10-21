@@ -201,7 +201,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path =~ `^/(cases/[a-z0-9-]+/)?$` [$__range]))",
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page =~ `^/(cases/[a-z0-9-]+/)?$` [$__range]))",
           "legendFormat": ""
         },
         {
@@ -213,7 +213,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(sum_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__range]))",
+          "expr": "sum(sum_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__range]))",
           "legendFormat": ""
         }
       ],
@@ -1437,7 +1437,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum by (class) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | label_format class=`{{ substr 0 1 .status }}xx` [$__auto]))",
+          "expr": "sum by (class) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | label_format class=`{{ substr 0 1 .status }}xx` [$__auto]))",
           "legendFormat": "{{class}}"
         }
       ],
@@ -1695,8 +1695,8 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "topk(10, sum by (path) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path !~ `^/(assets|cdn-cgi)/.*` | path !~ `.*\\.(png|ico|svg|xml|txt|webmanifest|jpg|woff2|js|css|map)$` [$__range])))",
-          "legendFormat": "{{path}}",
+          "expr": "topk(10, sum by (page) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page !~ `^/(assets|cdn-cgi)/.*` | page !~ `.*\\.(png|ico|svg|xml|txt|webmanifest|jpg|woff2|js|css|map)$` [$__range])))",
+          "legendFormat": "{{page}}",
           "queryType": "instant",
           "instant": true,
           "range": false
@@ -1710,7 +1710,7 @@
               "Time": true
             },
             "renameByName": {
-              "path": "Page",
+              "page": "Page",
               "Value #A": "Requests"
             }
           }
@@ -1790,8 +1790,8 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "topk(10, sum by (path) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=\"404\" [$__range])))",
-          "legendFormat": "{{path}}",
+          "expr": "topk(10, sum by (page) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=\"404\" [$__range])))",
+          "legendFormat": "{{page}}",
           "queryType": "instant",
           "instant": true,
           "range": false
@@ -1805,7 +1805,7 @@
               "Time": true
             },
             "renameByName": {
-              "path": "Path",
+              "page": "Path",
               "Value #A": "Requests"
             }
           }
@@ -1885,7 +1885,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "topk(10, sum by (referer) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path =~ `^/(cases/[a-z0-9-]+/)?$` | referer != \"-\" | referer !~ `https?://(www\\.)?gfilho\\.net.*` [$__range])))",
+          "expr": "topk(10, sum by (referer) (count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page =~ `^/(cases/[a-z0-9-]+/)?$` | referer != \"-\" | referer !~ `https?://(www\\.)?gfilho\\.net.*` [$__range])))",
           "legendFormat": "{{referer}}",
           "queryType": "instant",
           "instant": true,
@@ -1983,7 +1983,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path =~ `^/(cases/[a-z0-9-]+/)?$` | agent !~ `(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan|python|go-http|wget).*` [$__range]))",
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page =~ `^/(cases/[a-z0-9-]+/)?$` | agent !~ `(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan|python|go-http|wget).*` [$__range]))",
           "legendFormat": ""
         },
         {
@@ -1995,7 +1995,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | path =~ `^/(cases/[a-z0-9-]+/)?$` | agent =~ `(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan|python|go-http|wget).*` [$__range]))",
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"200|304\" | page =~ `^/(cases/[a-z0-9-]+/)?$` | agent =~ `(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan|python|go-http|wget).*` [$__range]))",
           "legendFormat": ""
         }
       ],
@@ -2116,7 +2116,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"2..\" [$__range]))",
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"2..\" [$__range]))",
           "legendFormat": ""
         },
         {
@@ -2128,7 +2128,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"3..\" [$__range]))",
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"3..\" [$__range]))",
           "legendFormat": ""
         },
         {
@@ -2140,7 +2140,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"4..\" [$__range]))",
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"4..\" [$__range]))",
           "legendFormat": ""
         },
         {
@@ -2152,7 +2152,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"5..\" [$__range]))",
+          "expr": "sum(count_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | status=~\"5..\" [$__range]))",
           "legendFormat": ""
         }
       ],
@@ -2327,7 +2327,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(sum_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format path=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__auto]))",
+          "expr": "sum(sum_over_time({job=\"nginx\", log=\"access\", env=\"production\"} !~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse\" | pattern `<_> - <_> [<_>] \"<method> <path> <_>\" <status> <bytes> \"<referer>\" \"<agent>\"<_>` | referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?` | label_format page=`{{ regexReplaceAll \"\\\\?.*$\" .path \"\" }}` | unwrap bytes | __error__=\"\" [$__auto]))",
           "legendFormat": "Bytes"
         }
       ],

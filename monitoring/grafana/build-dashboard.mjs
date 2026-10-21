@@ -142,11 +142,11 @@ const NOISE = 'gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Light
 const ACC = `{job="nginx", log="access", env="production"} !~ "${NOISE}"`;
 const PAT = '| pattern `<_> - <_> [<_>] "<method> <path> <_>" <status> <bytes> "<referer>" "<agent>"<_>`';
 const LOCAL = '| referer !~ `https?://(localhost|127\\.0\\.0\\.1)([:/].*)?`';            // local previews are not visitors
-const NORM = '| label_format path=`{{ regexReplaceAll "\\\\?.*$" .path "" }}`';             // /?utm=x counts as /
+const NORM = '| label_format page=`{{ regexReplaceAll "\\\\?.*$" .path "" }}`';             // page = path without ?query (/?utm=x counts as /). A new label on purpose: later filters ignore an overwritten "path"
 const BASE = `${ACC} ${PAT} ${LOCAL} ${NORM}`;
 const CLASS = '| label_format class=`{{ substr 0 1 .status }}xx`';
-const ASSET = '| path !~ `^/(assets|cdn-cgi)/.*` | path !~ `.*\\.(png|ico|svg|xml|txt|webmanifest|jpg|woff2|js|css|map)$`';
-const PAGE = '| path =~ `^/(cases/[a-z0-9-]+/)?$`';
+const ASSET = '| page !~ `^/(assets|cdn-cgi)/.*` | page !~ `.*\\.(png|ico|svg|xml|txt|webmanifest|jpg|woff2|js|css|map)$`';
+const PAGE = '| page =~ `^/(cases/[a-z0-9-]+/)?$`';
 const BOT = '(?i).*(bot|crawl|spider|slurp|facebookexternalhit|preview|feed|monitor|scan|python|go-http|wget).*';
 const VIEW = '| status=~"200|304"';
 const HOME = 'instance="https://gfilho.net/"';
@@ -305,9 +305,9 @@ area('Requests per second', 'All requests handled by nginx (including staging an
   [prom('rate(nginx_http_requests_total[$__rate_interval])'), prom('rate(cloudflared_tunnel_total_requests[$__rate_interval])')], pos(12, 34, 12, 8),
   { unit: 'reqps', names: ['nginx · all', 'Tunnel · from the internet'], legend: 'table', calcs: ['mean', 'max'] });
 barchart('Top pages', 'The 10 most viewed pages (200 or 304), without CSS, JS, images and technical files.',
-  `topk(10, sum by (path) (count_over_time(${BASE} ${VIEW} ${ASSET} [$__range])))`, 'path', 'Page', pos(0, 42, 8, 9), C.green);
+  `topk(10, sum by (page) (count_over_time(${BASE} ${VIEW} ${ASSET} [$__range])))`, 'page', 'Page', pos(0, 42, 8, 9), C.green);
 barchart('Top 404s', 'Requested paths that do not exist. Mostly bots looking for WordPress, .env files and similar: harmless here, none of it exists.',
-  `topk(10, sum by (path) (count_over_time(${BASE} | status="404" [$__range])))`, 'path', 'Path', pos(8, 42, 8, 9), C.amber);
+  `topk(10, sum by (page) (count_over_time(${BASE} | status="404" [$__range])))`, 'page', 'Path', pos(8, 42, 8, 9), C.amber);
 barchart('Top referrers', 'Where page views came from (links from the site itself are left out).',
   `topk(10, sum by (referer) (count_over_time(${BASE} ${VIEW} ${PAGE} | referer != "-" | referer !~ \`https?://(www\\.)?gfilho\\.net.*\` [$__range])))`, 'referer', 'Referrer', pos(16, 42, 8, 9), C.purple);
 pie('Humans vs bots', 'Page views by client type, from the User-Agent.',
