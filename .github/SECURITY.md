@@ -2,7 +2,7 @@
 
 ## Scope
 
-This repository holds the source of [gfilho.net](https://gfilho.net/): a static website, its nginx configuration and the scripts used to publish it. Security reports are welcome for anything here that could weaken the site or the server that hosts it, for example:
+This repository holds the source of [guilhermefilho.com](https://guilhermefilho.com/): a static website, its nginx configuration and the scripts used to publish it. Security reports are welcome for anything here that could weaken the site or the server that hosts it, for example:
 
 - a configuration that exposes a service, file or path that should not be public;
 - a missing or weaker-than-documented security header (CSP, framing, content-type, referrer or permissions policy);
@@ -14,7 +14,7 @@ This repository holds the source of [gfilho.net](https://gfilho.net/): a static 
 
 | Release | Supported |
 |---|---|
-| Current `main` (what runs on gfilho.net) | ✅ |
+| Current `main` (what runs on guilhermefilho.com) | ✅ |
 
 ## Reporting a vulnerability
 

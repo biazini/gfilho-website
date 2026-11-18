@@ -1,4 +1,4 @@
-// gfilho.net: footer year, section nav highlight and the "Latest project" pulse.
+// guilhermefilho.com: footer year, section nav highlight and the "Latest project" pulse.
 // The page works without this script; it only adds orientation cues.
 (function () {
   'use strict';

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Publish site/ to the local nginx (run inside WSL as root).
+# Publish site/ to the local nginx (run inside the LXC as root).
 #
 #   sudo deploy/deploy.sh staging      -> /var/www/gfilho-staging  (http://localhost:8089)
-#   sudo deploy/deploy.sh production   -> /var/www/html            (https://gfilho.net via the tunnel)
+#   sudo deploy/deploy.sh production   -> /var/www/html            (https://guilhermefilho.com via the tunnel)
 #
 # The current target is copied to /var/backups/gfilho/<timestamp>-<target>/ first, so a deploy
 # can be undone with:  rsync -a --delete /var/backups/gfilho/<snapshot>/ /var/www/html/
@@ -21,10 +21,10 @@ src="$(cd "$(dirname "$0")/../site" && pwd)"
 today="$(date +%Y-%m-%d)"
 
 # sitemap.xml: for each listed page whose HTML differs from the target, set its <lastmod> to today
-# in site/ (commit it afterwards). https://gfilho.net/cases/x/ maps to site/cases/x/index.html.
+# in site/ (commit it afterwards). https://guilhermefilho.com/cases/x/ maps to site/cases/x/index.html.
 if [ -f "$src/sitemap.xml" ]; then
   for loc in $(sed -n -E 's#.*<loc>([^<]+)</loc>.*#\1#p' "$src/sitemap.xml"); do
-    rel="${loc#https://gfilho.net/}"
+    rel="${loc#https://guilhermefilho.com/}"
     case "$rel" in ''|*/) rel="${rel}index.html" ;; esac
     [ -f "$src/$rel" ] || continue
     cmp -s "$src/$rel" "$dest/$rel" && continue

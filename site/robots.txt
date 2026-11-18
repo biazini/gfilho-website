@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://gfilho.net/sitemap.xml
+Sitemap: https://guilhermefilho.com/sitemap.xml

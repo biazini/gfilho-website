@@ -1,5 +1,5 @@
 name: Site correction
-description: Point out a broken link, a display problem or an accessibility issue on gfilho.net.
+description: Point out a broken link, a display problem or an accessibility issue on guilhermefilho.com.
 title: "[Site]: "
 body:
   - type: markdown

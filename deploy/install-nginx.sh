@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the nginx configuration for gfilho.net (run inside WSL as root).
+# Install the nginx configuration for guilhermefilho.com (run inside the LXC as root).
 # Keeps a copy of the previous configuration and rolls back automatically if `nginx -t` fails.
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "run as root (sudo)" >&2; exit 1; }
