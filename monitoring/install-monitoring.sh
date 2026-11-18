@@ -45,6 +45,8 @@ grep -q '^include "/etc/nftables.d/\*.nft"' /etc/nftables.conf || echo 'include 
 systemctl enable nftables >/dev/null 2>&1
 nft -f /etc/nftables.d/gfilho.nft
 nft list table inet gfilho >/dev/null || { echo "ERROR: nftables table inet gfilho not loaded; not starting Grafana" >&2; exit 1; }
+install -D -m 644 "$here/systemd/docker-requires-nftables.conf" /etc/systemd/system/docker.service.d/requires-nftables.conf
+systemctl daemon-reload
 echo "firewall: Grafana :3000 open to 10.10.10.10 only"
 
 # 5. containers (restart: unless-stopped, so they come back with Docker when the container starts)
