@@ -1,19 +1,19 @@
 <p align="center"><img src="site/favicon.svg" alt="" width="72" height="72"></p>
 
-<h1 align="center">gfilho.net</h1>
+<h1 align="center">guilhermefilho.com</h1>
 
-<p align="center">Source of <a href="https://gfilho.net/">gfilho.net</a>, the personal site of Guilherme Filho:<br>platform and infrastructure engineer working on hybrid cloud and automation.</p>
+<p align="center">Source of <a href="https://guilhermefilho.com/">guilhermefilho.com</a>, the personal site of Guilherme Filho:<br>platform and infrastructure engineer working on hybrid cloud and automation.</p>
 
-A static, single-page site: plain HTML, CSS and two small JavaScript files. No framework, no build step, no analytics, no cookies set by the site and no third-party requests at runtime. It is served by nginx inside WSL 2 and published through a Cloudflare Tunnel, so the origin is never exposed to the internet.
+A static, single-page site: plain HTML, CSS and two small JavaScript files. No framework, no build step, no analytics, no cookies set by the site and no third-party requests at runtime. It is served by nginx in an LXC container (CT 107) on a Proxmox VE host and published through a Cloudflare Tunnel, so the origin is never exposed to the internet. Only visitors in Portugal (and verified search and link-preview bots) are let through.
 
 | | |
 |---|---|
-| **Live site** | <https://gfilho.net/> |
-| **Stack** | HTML5, CSS, vanilla JavaScript · nginx 1.28 (WSL 2, Ubuntu 26.04 LTS) · Cloudflare Tunnel |
-| **Security** | Strict same-origin CSP, security headers on every response, loopback-only origin, HTTPS-only canonical host, [security.txt](https://gfilho.net/.well-known/security.txt) |
+| **Live site** | <https://guilhermefilho.com/> |
+| **Stack** | HTML5, CSS, vanilla JavaScript · nginx 1.26 (Debian 13 LXC on Proxmox VE) · Cloudflare Tunnel |
+| **Security** | Strict same-origin CSP, security headers on every response, loopback-only origin, HTTPS-only canonical host, Portugal-only access at the edge, [security.txt](https://guilhermefilho.com/.well-known/security.txt) |
 | **Quality** | W3C-valid HTML and CSS · WCAG 2.2 AA · Lighthouse 100 for accessibility, best practices and SEO |
 
-<p align="center"><img src="site/og-image.png" alt="gfilho.net social preview" width="420"></p>
+<p align="center"><img src="site/og-image.png" alt="guilhermefilho.com social preview" width="420"></p>
 
 ## Contents
 
@@ -43,23 +43,23 @@ A static, single-page site: plain HTML, CSS and two small JavaScript files. No f
 
 ## 2. Architecture
 
-![gfilho.net hosting architecture](docs/architecture/gfilho-hosting-architecture.png)
+![guilhermefilho.com hosting architecture](docs/architecture/gfilho-hosting-architecture.png)
 
 *Figure 1. Hosting architecture (source: [`gfilho-hosting-architecture.drawio`](docs/architecture/gfilho-hosting-architecture.drawio))*
 
-Visitors reach Cloudflare over HTTPS. Cloudflare terminates TLS and forwards the request through a named tunnel to `cloudflared`, which runs as a systemd service inside WSL and keeps an **outbound-only** connection to Cloudflare. `cloudflared` passes the request to nginx on `localhost:8088`. nginx listens on loopback only, so the origin cannot be reached from the network, even from the local LAN.
+Visitors reach Cloudflare over HTTPS. Cloudflare terminates TLS and forwards the request through a named tunnel to `cloudflared`, which runs as a systemd service inside CT 107 and keeps an **outbound-only** connection to Cloudflare. `cloudflared` passes the request to nginx on `localhost:8088`. nginx listens on loopback only, so the origin cannot be reached from the network, even from the local LAN.
 
 | Component | Where | Responsibility |
 |---|---|---|
-| Cloudflare edge | Cloudflare | DNS (proxied records), edge certificate, TLS 1.2+, HSTS, Always Use HTTPS, static asset cache, email obfuscation. |
-| Tunnel ingress | Cloudflare | Routes `gfilho.net` and `www.gfilho.net` to `http://localhost:8088`; every other host name gets a 404. |
-| `cloudflared` | WSL, systemd | Holds the tunnel open. No inbound port is needed on the host or the router. |
+| Cloudflare edge | Cloudflare | DNS (proxied records), edge certificate, TLS 1.2+, HSTS (6 months, no subdomains, no preload), Always Use HTTPS, static asset cache, email obfuscation, and a custom WAF rule that blocks requests from outside Portugal unless Cloudflare verified the client as a known bot: `(ip.src.country ne "PT" and not cf.client.bot)`. |
+| Tunnel ingress | CT 107, `/etc/cloudflared/config.yml` | Locally managed tunnel `gfilho-web`; routes `guilhermefilho.com` and `www.guilhermefilho.com` to `http://localhost:8088`; every other host name gets a 404. |
+| `cloudflared` | CT 107, systemd | Holds the tunnel open. No inbound port is needed on the host or the router. |
 | nginx, production | `127.0.0.1:8088` | Serves `/var/www/html`, the live site. |
 | nginx, staging | `127.0.0.1:8089` | Serves `/var/www/gfilho-staging` for local previews; never published. |
 | nginx, status | `127.0.0.1:8090` | `stub_status` counters for the monitoring stack; loopback only. |
-| `deploy/deploy.sh` | WSL | Publishes `site/` to staging or production, with a backup and a smoke test. |
+| `deploy/deploy.sh` | CT 107 | Publishes `site/` to staging or production, with a backup and a smoke test. |
 | Backups | `/var/backups/gfilho` | One snapshot of the target per deploy (and of the nginx configuration per install), readable by root only. |
-| Monitoring | WSL, Docker, loopback ports | Prometheus, Loki, Alloy, exporters and Grafana on `http://localhost:3000` ([9. Monitoring](#9-monitoring)). |
+| Monitoring | CT 107, Docker, loopback ports | Prometheus, Loki, Alloy, exporters and Grafana; Grafana is published on the home network only, as `https://grafana.lab.guilhermefilho.com` through the Nginx Proxy Manager ([9. Monitoring](#9-monitoring)). |
 | Source repository | GitHub | `main` is protected by a ruleset (no deletion, no force push); secret scanning, push protection and private vulnerability reporting are on. |
 
 ## 3. Request handling
@@ -70,7 +70,7 @@ Visitors reach Cloudflare over HTTPS. Cloudflare terminates TLS and forwards the
 
 Both server blocks include the same snippet, [`deploy/nginx/gfilho-common.conf`](deploy/nginx/gfilho-common.conf), so staging behaves exactly like production:
 
-1. **Canonical host.** Requests for `www.gfilho.net`, or requests that reached Cloudflare over plain HTTP (the `CF-Visitor` header carries `"scheme":"http"`), get a `301` to `https://gfilho.net` with the same path.
+1. **Canonical host.** Requests for `www.guilhermefilho.com`, or requests that reached Cloudflare over plain HTTP (the `CF-Visitor` header carries `"scheme":"http"`), get a `301` to `https://guilhermefilho.com` with the same path.
 2. **Hidden files.** Dotfiles (except `/.well-known/`), editor leftovers and backup files (`.bak`, `.old`, `.orig`, `.swp`, `~` and similar) always return `404`, even if one ends up in the web root by mistake.
 3. **Directories.** A directory without the trailing slash (`/cases/self-healing`) gets a **relative** `301` to `/cases/self-healing/` (`absolute_redirect off`, so nginx never sends its internal `:8088` port). `/cases/` itself redirects to `/#projects`, and any other directory without an `index.html` (`/assets/`, `/.well-known/`) gets the 404 page instead of nginx's default 403.
 4. **Static files.** Anything else is served from the web root with `try_files`; a missing file gets the custom `/404.html` page with a real `404` status. Missing files are not written to `error.log` (`log_not_found off`): bots probing for WordPress or `.env` files would bury real errors. They stay in the access log and on the dashboard's Top 404s.
@@ -120,7 +120,7 @@ Cache lifetimes depend on the path:
 │   ├── nginx/                   Server blocks, security headers, cache rules, redirects, stub_status
 │   └── systemd/                 nginx drop-in: restart automatically if it dies
 ├── monitoring/                  Prometheus, Loki, Alloy, exporters and Grafana (Docker Compose)
-│   ├── install-monitoring.sh    Install or update the stack and reload what changed (run as root in WSL)
+│   ├── install-monitoring.sh    Install or update the stack and reload what changed (run as root in CT 107)
 │   ├── grafana/build-dashboard.mjs  Source of the dashboard; writes grafana/dashboards/gfilho.json
 │   ├── prometheus/rules.test.yml    promtool unit tests for the alert rules and dashboard expressions
 │   └── tests/                   check-queries.py, check-values.py, query-timings.py: validate the dashboard
@@ -138,10 +138,10 @@ Cache lifetimes depend on the path:
 
 | Requirement | Used for |
 |---|---|
-| WSL 2 with Ubuntu 26.04 LTS, nginx, `rsync` and `curl` | Serving and deploying the site (run the scripts as root). The WSL distribution is still called `Ubuntu-24.04`: it was upgraded in place. |
-| Docker Engine with the Compose plugin (inside WSL) | The local monitoring stack ([9. Monitoring](#9-monitoring)). Not needed to serve the site. |
-| `cloudflared` with a named tunnel whose ingress points at `http://localhost:8088`, and `edge-ip-version: "4"` in `/etc/cloudflared/config.yml` (the IPv6 route of this PC drops now and then, which made tunnel connections fail with "network is unreachable"; visitors still reach the site over IPv6 through Cloudflare) | Publishing production. Not needed to work on staging. |
-| Google Chrome on Windows | Regenerating images (`tools/build-images.ps1`). |
+| LXC 107 (`gfilho-web`, 10.10.10.26) on Proxmox VE: Debian 13, unprivileged, `nesting=1,keyctl=1`, with nginx, `rsync`, `curl`, `git` and `nftables`. The repository is a host folder (`/srv/gfilho-website`) mounted at `/opt/gfilho-website`, pushed with the write deploy key `gfilho-ct107-write` | Serving and deploying the site (run the scripts as root inside the CT: `pct enter 107`). |
+| Docker Engine with the Compose plugin (inside CT 107) | The monitoring stack ([9. Monitoring](#9-monitoring)) and the throwaway containers that regenerate images. Not needed to serve the site. |
+| `cloudflared` with the locally managed tunnel `gfilho-web` (`/etc/cloudflared/config.yml`: ingress for `guilhermefilho.com` and `www` to `http://localhost:8088`, metrics on `127.0.0.1:20241`; credentials in `/etc/cloudflared/<tunnel-id>.json`, root only) | Publishing production. Not needed to work on staging. |
+| Docker (in CT 107), or Google Chrome on Windows | Regenerating images (see [7](#7-images-and-diagrams)). |
 | A code editor; optionally VS Code with the Draw.io Integration extension (`hediet.vscode-drawio`) | Editing the page and the diagrams. |
 
 ### 5.2 Release workflow
@@ -150,7 +150,7 @@ Cache lifetimes depend on the path:
 
 *Figure 3. Release workflow and deploy pipeline (source: [`gfilho-deploy-pipeline.drawio`](docs/architecture/gfilho-deploy-pipeline.drawio))*
 
-Edit the files under `site/`, preview them on staging, then publish. From WSL, as root, in the repository folder:
+Edit the files under `site/`, preview them on staging, then publish. Inside CT 107 (`pct enter 107`), as root, in `/opt/gfilho-website`:
 
 ```bash
 # one-time, and again after changing deploy/nginx/*
@@ -159,7 +159,7 @@ bash deploy/install-nginx.sh
 # preview at http://localhost:8089/
 bash deploy/deploy.sh staging
 
-# publish to https://gfilho.net/
+# publish to https://guilhermefilho.com/
 bash deploy/deploy.sh production
 ```
 
@@ -207,7 +207,15 @@ Snapshots ending in `-nginx` hold the nginx configuration (`sites-available`, `s
 
 **Logo.** The source is `site/favicon.svg`. The same artwork is inlined as the `#logo` symbol at the top of `index.html` (used in the header and footer), so keep the two in sync. `tools/logo-full-bleed.svg` is the edge-to-edge variant used for `apple-touch-icon.png`, because iOS rounds the corners itself.
 
-**Generated images.** `og-image.png` (the 1200×630 social preview), the PNG icons and `favicon.ico` are generated from `tools/*.html`. On Windows with Google Chrome installed:
+**Generated images.** `og-image.png` (the 1200×630 social preview), the PNG icons and `favicon.ico` are generated from `tools/*.html` with headless Chrome. In CT 107, the social preview is rendered in a throwaway container:
+
+```bash
+docker run --rm -v /opt/gfilho-website:/w debian:trixie bash -c 'apt-get update -qq && apt-get install -y -qq chromium >/dev/null && \
+  chromium --headless=new --no-sandbox --disable-gpu --hide-scrollbars --allow-file-access-from-files --default-background-color=00000000 \
+  --force-device-scale-factor=1 --window-size=1200,630 --screenshot=/w/site/og-image.png --virtual-time-budget=3000 file:///w/tools/og-image.html'
+```
+
+The full set (icons and `favicon.ico` too) is still built on Windows with Google Chrome installed:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-images.ps1
@@ -215,34 +223,34 @@ powershell -ExecutionPolicy Bypass -File tools\build-images.ps1
 
 After regenerating, bump `?v=` on the icon, manifest and `og:image` URLs in `index.html` and `404.html` (and on the icons in `site.webmanifest`), so browsers and link previews fetch the new files.
 
-**Diagrams.** The figures in this README are drawn in [draw.io](https://www.drawio.com/). The `.drawio` files in `docs/architecture/` are the sources; open them in draw.io or in VS Code with the Draw.io Integration extension. After editing, export a PNG next to the source with the same name (*File › Export as › PNG*, zoom 200 %, border 16, white background) and commit both. When the nginx configuration or `deploy.sh` changes, update the matching diagram in the same commit.
+**Diagrams.** The figures in this README are drawn in [draw.io](https://www.drawio.com/). The `.drawio` files in `docs/architecture/` are the sources; open them in draw.io or in VS Code with the Draw.io Integration extension. After editing, export a PNG next to the source with the same name (*File › Export as › PNG*, zoom 200 %, border 16, white background) and commit both. Without draw.io desktop, export in CT 107 with the `rlespinasse/drawio-desktop-headless` image (`-x -f png -s 2 -b 16`) from a temporary copy in which `fontFamily=Segoe UI` is replaced by `fontFamily=Noto Sans`: Segoe UI does not exist on Linux, and Chromium falls back to a serif font instead. When the nginx configuration or `deploy.sh` changes, update the matching diagram in the same commit.
 
 ## 8. Checking a release
 
 Quick checks after a production deploy, from any machine:
 
 ```bash
-# canonical host and redirects: expect 200, then 301 to https://gfilho.net/ twice
-curl -sI https://gfilho.net/ | head -n 1
-curl -sI http://gfilho.net/ | grep -iE '^(HTTP|location)'
-curl -sI https://www.gfilho.net/ | grep -iE '^(HTTP|location)'
+# canonical host and redirects: expect 200, then 301 to https://guilhermefilho.com/ twice
+curl -sI https://guilhermefilho.com/ | head -n 1
+curl -sI http://guilhermefilho.com/ | grep -iE '^(HTTP|location)'
+curl -sI https://www.guilhermefilho.com/ | grep -iE '^(HTTP|location)'
 
 # security headers
-curl -sI https://gfilho.net/ | grep -iE 'content-security-policy|x-content-type|x-frame|referrer-policy|permissions-policy|cross-origin-opener|strict-transport'
+curl -sI https://guilhermefilho.com/ | grep -iE 'content-security-policy|x-content-type|x-frame|referrer-policy|permissions-policy|cross-origin-opener|strict-transport'
 
 # directory without the trailing slash: expect a relative Location, /cases/self-healing/
-curl -sI https://gfilho.net/cases/self-healing | grep -i '^location'
+curl -sI https://guilhermefilho.com/cases/self-healing | grep -i '^location'
 
 # custom 404 and blocked files: expect 404 for both
-curl -s -o /dev/null -w '%{http_code}\n' https://gfilho.net/no-such-page
-curl -s -o /dev/null -w '%{http_code}\n' https://gfilho.net/.git/config
+curl -s -o /dev/null -w '%{http_code}\n' https://guilhermefilho.com/no-such-page
+curl -s -o /dev/null -w '%{http_code}\n' https://guilhermefilho.com/.git/config
 ```
 
-For a full audit, run [Lighthouse](https://developer.chrome.com/docs/lighthouse) (Chrome DevTools › Lighthouse, or `npx lighthouse https://gfilho.net/`), and validate the page with the [W3C HTML](https://validator.w3.org/nu/?doc=https%3A%2F%2Fgfilho.net%2F) and [CSS](https://jigsaw.w3.org/css-validator/validator?uri=https%3A%2F%2Fgfilho.net%2F) validators.
+For a full audit, run [Lighthouse](https://developer.chrome.com/docs/lighthouse) (Chrome DevTools › Lighthouse, or `npx lighthouse https://guilhermefilho.com/`), and validate the page with the [W3C HTML](https://validator.w3.org/nu/?doc=https%3A%2F%2Fguilhermefilho.com%2F) and [CSS](https://jigsaw.w3.org/css-validator/validator?uri=https%3A%2F%2Fguilhermefilho.com%2F) validators.
 
 ## 9. Monitoring
 
-A local stack watches the site, the tunnel and the WSL host, and shows it all on one Grafana dashboard. Grafana opens at **<http://localhost:3000>** on this PC, read-only and without a login. The admin password is generated on the first install and is stored only in `/etc/gfilho-monitoring/grafana.env` (`sudo cat` it in WSL).
+A stack inside CT 107 watches the site, the tunnel and the container, and shows it all on one Grafana dashboard. Grafana opens at **<https://grafana.lab.guilhermefilho.com>** from the home network (it is also a tile on the Homarr board), read-only and without a login. Grafana listens on `10.10.10.26:3000`, and nftables (`monitoring/nftables/gfilho.nft`, installed by the installer before the containers start) only lets the Nginx Proxy Manager (`10.10.10.10`) connect; every other port of the stack stays on loopback. The admin password is generated on the first install and is stored only in `/etc/gfilho-monitoring/grafana.env` (`cat` it as root in the CT).
 
 ```bash
 # install or update: copies monitoring/ to /opt/gfilho-monitoring, starts the containers and
@@ -255,39 +263,39 @@ bash monitoring/install-monitoring.sh
 | Prometheus | 9091 | Metrics, 30 days; alert rules in `monitoring/prometheus/rules.yml` |
 | blackbox-exporter | 9115 | Probes of the public pages (every 60 s), the origin and staging, the 301 redirects and DNS |
 | nginx-prometheus-exporter | 9113 | Connections and requests from nginx `stub_status` (`127.0.0.1:8090`) |
-| node-exporter | 9100 | CPU, memory, pressure (PSI), disk (the WSL disk and the Windows drive C: that holds it), network, systemd units, and the custom `gfilho_*` metrics |
-| `gfilho-metrics.timer` | — | Every 2 min: security.txt expiry, last deploy, backups, WSL offline time, pending updates, component versions |
+| node-exporter | 9100 | CPU, memory, pressure (PSI), disk (the CT 107 disk), network, systemd units, and the custom `gfilho_*` metrics |
+| `gfilho-metrics.timer` | — | Every 2 min: security.txt expiry, last deploy, backups, CT 107 offline time, pending updates, component versions |
 | `cloudflared` | 20241 | Tunnel connections, requests, errors and QUIC latency (built into cloudflared) |
 | Loki + Alloy | 3100 | nginx access and error logs, and the journal of nginx, cloudflared and logrotate; 14 days |
-| Grafana | 3000 | The dashboard `gfilho.net — Monitoring` (the home page), in the `gfilho.net` folder |
+| Grafana | 10.10.10.26:3000 (NPM only) | The dashboard `guilhermefilho.com — Monitoring` (the home page), in the `guilhermefilho.com` folder |
 
 The dashboard is provisioned from a file and read-only in Grafana. It is one page, most urgent first; every section is a row you can fold away, and only Logs starts folded. Grafana queries only the panels in view (measured: 21 Prometheus queries and no Loki query per refresh at the top of the page), so the sections further down cost nothing until you scroll to them. Refresh: 1 minute.
 
 | Section | Question it answers | What it shows |
 |---|---|---|
-| *(top)* | Is the site reachable, fast and healthy right now? | Status strip (public site, origin, tunnel links, response time, p95, availability, monitored share of the range, alerts firing) · lifecycle strip (TLS and security.txt expiry, last deploy, WSL offline 24 h and 7 d) · one uptime line per check · alerts now and alert history (pending and firing) |
+| *(top)* | Is the site reachable, fast and healthy right now? | Status strip (public site, origin, tunnel links, response time, p95, availability, monitored share of the range, alerts firing) · lifecycle strip (TLS and security.txt expiry, last deploy, host offline 24 h and 7 d) · one uptime line per check · alerts now and alert history (pending and firing) |
 | Latency & traffic | Is it slow, is it failing? | Public response time (log scale) · traffic through the tunnel by status class with proxy errors |
 | Visitors & security | Who uses the site, what fails, what probes it? | Visitor totals (page views, requests, data served, 404, 5xx, 5xx share, log pipeline) · request sources (visitors, probes, tools, local previews, staging, against the nginx total) · responses by status class · error share · data served · top pages, 404s and referrers · clients · status mix · unusual requests |
-| Services | Are nginx, cloudflared, Docker and the metrics timer running? | Services now (state, failed units, restarts, WSL uptime) and their history |
+| Services | Are nginx, cloudflared, Docker and the metrics timer running? | Services now (state, failed units, restarts, CT uptime) and their history |
 | Cloudflare Tunnel | Is the edge link healthy? | Links, edge RTT, registrations, proxy errors · connected data centres · responses by status code · edge link |
 | Web server & probes | Where does the time go? | nginx vs tunnel request rate · nginx connections · probe time by phase |
-| Host · WSL | Is the VM short of something? | CPU & memory, memory, pressure (PSI), disk space (WSL disk and C:), network |
+| Host · LXC 107 | Is the container short of something? | CPU & memory, memory, pressure (PSI), disk space, network |
 | Publishing & monitoring | Are deploys, backups and the monitoring itself fine? | Publishing & backups · monitoring pipeline · maintenance · installed versions |
 | Logs *(folded)* | What exactly happened? | nginx errors, service warnings, recent visitor requests, unusual requests (raw lines) |
 
 How to read it:
 
 - **States.** `UP`/`DOWN` come from the probes; `UNKNOWN` means Prometheus cannot reach the probe exporter, and `NO DATA` (grey) means there is no sample at all. A missing value is never shown as zero or as healthy.
-- **Availability** counts only the time monitoring was running; **Monitored** says how much of the selected range that was. Both are needed: with WSL off there are no probes at all.
-- **p95** is the 95th percentile of the probe samples (one a minute, from this PC through Cloudflare), not the latency of real visitors. nginx records `request_time` for real requests, but it is 0 ms for 99 % of them (static files), so it is not charted.
+- **Availability** counts only the time monitoring was running; **Monitored** says how much of the selected range that was. Both are needed: with CT 107 off there are no probes at all.
+- **p95** is the 95th percentile of the probe samples (one a minute, from CT 107 on the home network through Cloudflare), not the latency of real visitors. nginx records `request_time` for real requests, but it is 0 ms for 99 % of them (static files), so it is not charted.
 - **Latency colours** follow the web.dev TTFB guidance: good up to 0.8 s, poor above 1.8 s. The probe time includes DNS, connect, TLS and the whole response, so it is never faster than TTFB.
 - **Request rates** are in requests per hour everywhere, so the nginx, tunnel and log figures compare directly.
 - **Visitors** are the lines of the production access log without the monitoring probes (User-Agent `gfilho-monitor`), automated tools (curl, scripts, headless browsers, the self-audit link checker) and local previews. A page view is a visitor request to `/` or `/cases/*/` answered `200` (or `304` from the browser cache). **Clients** splits page views by User-Agent into Bots & tools, Browsers and Unclassified (exclusive groups; a scanner can pretend to be a browser, so Browsers is an upper bound for people). The logs do not record visitor IP addresses, so there are no "unique visitor" figures.
-- **Annotations** (toggles at the top): deploys, WSL starts (the 10 minutes after each boot) and tunnel (re)registrations.
+- **Annotations** (toggles at the top): deploys, host starts (the 10 minutes after each CT boot) and tunnel (re)registrations.
 
-**Alerts.** `monitoring/prometheus/rules.yml` has 16 rules. Besides the site, tunnel and host rules, `ScrapeTargetDown` and `CustomMetricsStale` fire when the data an alert depends on stops arriving (a rule such as `SiteDown` cannot fire without probe results), and `HostDriveAlmostFull` watches C:, the real limit of the WSL virtual disk. There is no Alertmanager: the alert list at the top of the dashboard is the notification.
+**Alerts.** `monitoring/prometheus/rules.yml` has 15 rules. Besides the site, tunnel and host rules, `ScrapeTargetDown` and `CustomMetricsStale` fire when the data an alert depends on stops arriving (a rule such as `SiteDown` cannot fire without probe results). There is no Alertmanager: the alert list at the top of the dashboard is the notification.
 
-**Changing the dashboard.** Edit `monitoring/grafana/build-dashboard.mjs`, regenerate the JSON with `node monitoring/grafana/build-dashboard.mjs monitoring/grafana/dashboards` (the build stops on overlapping panels, duplicate titles or ids, unknown panel types and localhost links), and run the installer again. Then check it inside WSL, with the stack running:
+**Changing the dashboard.** Edit `monitoring/grafana/build-dashboard.mjs`, regenerate the JSON with `node monitoring/grafana/build-dashboard.mjs monitoring/grafana/dashboards` (the build stops on overlapping panels, duplicate titles or ids, unknown panel types and localhost links), and run the installer again. Then check it inside CT 107, with the stack running (the tests talk to Grafana on `10.10.10.26:3000`):
 
 ```bash
 # alert rules and the trickier dashboard expressions, against synthetic data
@@ -300,13 +308,13 @@ sudo python3 monitoring/tests/check-values.py
 python3 monitoring/tests/query-timings.py /tmp/timings.json
 ```
 
-**When the PC is off.** The stack runs inside the same WSL as the site, so it can only show that the site was down **after** WSL comes back (the uptime line has a gap, *Monitored* drops below 100 %, *WSL offline* grows). The probes also leave from this PC, so a local network fault looks like an outage. Nothing here can send a notification while the PC is off. For that, add an external uptime monitor for `https://gfilho.net/` (for example a free HTTP monitor with email alerts) and the tunnel health notification in Cloudflare.
+**When the host is down.** The stack runs inside the same container as the site, so it can only show that the site was down **after** CT 107 comes back (the uptime line has a gap, *Monitored* drops below 100 %, *Host offline* grows). The probes leave from the home network in Portugal, so a local network fault looks like an outage, and they pass the Portugal-only rule. Nothing here can send a notification while the Proxmox host or the home connection is down. For that, add an external uptime monitor for `https://guilhermefilho.com/` (with a monitor located in Portugal, or an exception for it in the WAF rule) and the tunnel health notification in Cloudflare.
 
-The containers restart with Docker when WSL starts. To stop the stack: `docker compose -f /opt/gfilho-monitoring/docker-compose.yml down` (add `-v` to delete the stored metrics and logs).
+The containers restart with Docker when CT 107 starts (`onboot: 1`). To stop the stack: `docker compose -f /opt/gfilho-monitoring/docker-compose.yml down` (add `-v` to delete the stored metrics and logs).
 
 ## 10. Security
 
-Report security problems privately, as described in the [security policy](.github/SECURITY.md) (the contact details are also in [`/.well-known/security.txt`](https://gfilho.net/.well-known/security.txt)). Please do not open public issues for them.
+Report security problems privately, as described in the [security policy](.github/SECURITY.md) (the contact details are also in [`/.well-known/security.txt`](https://guilhermefilho.com/.well-known/security.txt)). Please do not open public issues for them.
 
 ## 11. Licenses
 
