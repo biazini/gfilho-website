@@ -52,12 +52,14 @@ compose() { docker compose -f "$dest/docker-compose.yml" "$@"; }
 compose pull --quiet
 compose up -d --remove-orphans
 # "up" only recreates containers whose compose definition changed: apply changed config files as well
+# (HUP is sent from inside the container: "docker kill", even with HUP, marks a container as manually stopped,
+# and restart: unless-stopped then leaves it down after the next boot)
 if grep -q ' prometheus/' <<<"$changed"; then
   compose exec -T prometheus promtool check config /etc/prometheus/prometheus.yml >/dev/null
-  compose kill -s HUP prometheus >/dev/null && echo "reload:  prometheus (scrape config and rules)"
+  compose exec -T prometheus kill -HUP 1 >/dev/null && echo "reload:  prometheus (scrape config and rules)"
 fi
-if grep -q ' blackbox/' <<<"$changed"; then compose kill -s HUP blackbox-exporter >/dev/null && echo "reload:  blackbox-exporter"; fi
-if grep -q ' alloy/' <<<"$changed"; then compose kill -s HUP alloy >/dev/null && echo "reload:  alloy"; fi
+if grep -q ' blackbox/' <<<"$changed"; then compose exec -T blackbox-exporter kill -HUP 1 >/dev/null && echo "reload:  blackbox-exporter"; fi
+if grep -q ' alloy/' <<<"$changed"; then compose exec -T alloy kill -HUP 1 >/dev/null && echo "reload:  alloy"; fi
 if grep -q ' loki/' <<<"$changed"; then compose restart loki >/dev/null && echo "restart: loki"; fi
 if grep -q ' grafana/provisioning/' <<<"$changed"; then compose restart grafana >/dev/null && echo "restart: grafana (provisioning)"; fi
 # dashboards (grafana/dashboards/*.json) need nothing: Grafana reads that folder again every 60 s
