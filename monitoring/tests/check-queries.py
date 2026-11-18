@@ -32,7 +32,7 @@ def query(t, panel, rng):
     min_iv = seconds(panel.get("interval")) or (30 if t["datasource"]["uid"] == "prometheus" else 1)
     q = dict(t, intervalMs=max(nice(rng / points), min_iv) * 1000, maxDataPoints=points)
     body = {"from": str(now - rng * 1000), "to": str(now), "queries": [q]}
-    req = urllib.request.Request("http://127.0.0.1:3000/api/ds/query", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    req = urllib.request.Request("http://10.10.10.26:3000/api/ds/query", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     try:
         r = json.load(urllib.request.urlopen(req, timeout=120))["results"][q["refId"]]
     except urllib.error.HTTPError as e:

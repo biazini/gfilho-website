@@ -27,7 +27,7 @@ def grafana(title, ref="A", expr=None, instant=None, by_labels=None):
     q = dict(t, intervalMs=60000, maxDataPoints=800)
     now = int(time.time() * 1000)
     body = {"from": str(now - 86400 * 1000), "to": str(now), "queries": [q]}
-    req = urllib.request.Request("http://127.0.0.1:3000/api/ds/query", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    req = urllib.request.Request("http://10.10.10.26:3000/api/ds/query", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     frames = json.load(urllib.request.urlopen(req, timeout=60))["results"][ref].get("frames", [])
     out = {}
     for f in frames:
