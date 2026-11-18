@@ -1,5 +1,5 @@
-// Alloy: ships the nginx logs and the journal of the site's services to Loki: the local one (127.0.0.1:3100)
-// and the gfhomelab observability stack in CT 108 (10.10.10.27:3100).
+// Alloy: ships the nginx logs and the journal of the site's services to Loki in the gfhomelab observability
+// stack (CT 108, 10.10.10.27:3100).
 // Labels stay few (job, log, env, unit); fields such as status and path are parsed at query time.
 
 local.file_match "nginx" {
@@ -84,7 +84,7 @@ loki.process "nginx" {
       values = { level = "" }
     }
   }
-  forward_to = [loki.write.local.receiver, loki.write.ct108.receiver]
+  forward_to = [loki.write.ct108.receiver]
 }
 
 loki.relabel "journal" {
@@ -125,13 +125,7 @@ loki.process "journal" {
       values = { level = "lvl" }
     }
   }
-  forward_to = [loki.write.local.receiver, loki.write.ct108.receiver]
-}
-
-loki.write "local" {
-  endpoint {
-    url = "http://127.0.0.1:3100/loki/api/v1/push"
-  }
+  forward_to = [loki.write.ct108.receiver]
 }
 
 loki.write "ct108" {

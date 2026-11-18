@@ -119,7 +119,7 @@ Cache lifetimes depend on the path:
 │   ├── install-nginx.sh         Install the nginx configuration (rolls back if `nginx -t` fails)
 │   ├── nginx/                   Server blocks, security headers, cache rules, redirects, stub_status
 │   └── systemd/                 nginx drop-in: restart automatically if it dies
-├── monitoring/                  Prometheus, Loki, Alloy, exporters and Grafana (Docker Compose)
+├── monitoring/                  Exporters and Alloy for the gfhomelab observability stack (Docker Compose)
 │   ├── install-monitoring.sh    Install or update the stack and reload what changed (run as root in CT 107)
 │   ├── grafana/build-dashboard.mjs  Source of the dashboard; writes grafana/dashboards/gfilho.json
 │   ├── prometheus/rules.test.yml    promtool unit tests for the alert rules and dashboard expressions
@@ -250,67 +250,30 @@ For a full audit, run [Lighthouse](https://developer.chrome.com/docs/lighthouse)
 
 ## 9. Monitoring
 
-A stack inside CT 107 watches the site, the tunnel and the container, and shows it all on one Grafana dashboard. Grafana opens at **<https://grafana.lab.guilhermefilho.com>** from the home network (it is also a tile on the Homarr board), read-only and without a login. Grafana listens on `10.10.10.26:3000`, and nftables (`monitoring/nftables/gfilho.nft`, installed by the installer before the containers start) only lets the Nginx Proxy Manager (`10.10.10.10`) connect; every other port of the stack stays on loopback. The admin password is generated on the first install and is stored only in `/etc/gfilho-monitoring/grafana.env` (`cat` it as root in the CT).
+Since 2026-11-18 the monitoring of the site lives in the gfhomelab observability stack, in its own container
+(CT 108, repository [biazini/gfhomelab-observability](https://github.com/biazini/gfhomelab-observability)): Prometheus,
+Loki, Alertmanager (email alerts) and Grafana at **<https://grafana.lab.guilhermefilho.com>** (home network, read-only,
+no login; the site has its own view, `guilhermefilho.com`). CT 107 only runs what has to sit next to the site:
+
+| Component | Port (10.10.10.26, CT 108 only) | What it gives |
+|---|---|---|
+| node-exporter | 9100 | CPU, memory, disk and network of CT 107, systemd units, and the custom `gfilho_*` metrics |
+| `gfilho-metrics.timer` | — | Every 2 min: security.txt expiry, last deploy, backups, CT 107 offline time, pending updates, component versions |
+| nginx-prometheus-exporter | 9113 | Connections and requests from nginx `stub_status` (`127.0.0.1:8090`) |
+| blackbox-exporter | 9115 | Probes of the origin (`127.0.0.1:8088`) and staging (`:8089`), asked for by CT 108 |
+| `cloudflared` | 20241 | Tunnel connections, requests, errors and QUIC latency |
+| Alloy | 12345 | Ships the nginx logs and the journal of nginx, cloudflared and logrotate to Loki in CT 108; classifies every request as `human`, `bot` or `self` and counts them (`loki_process_custom_site_requests_total`) |
+
+nginx logs the visitor's real IP (from `CF-Connecting-IP`, the tunnel connects from loopback) and country
+(`ip_country=`, from `CF-IPCountry`); logs are kept 14 days in Loki.
 
 ```bash
-# install or update: copies monitoring/ to /opt/gfilho-monitoring, starts the containers and
-# reloads Prometheus, blackbox-exporter, Alloy, Loki or Grafana when their files changed
+# install or update the exporters, the firewall (only CT 108 may connect) and the metrics timer
 bash monitoring/install-monitoring.sh
 ```
 
-| Component | Port (loopback) | What it collects |
-|---|---|---|
-| Prometheus | 9091 | Metrics, 30 days; alert rules in `monitoring/prometheus/rules.yml` |
-| blackbox-exporter | 9115 | Probes of the public pages (every 60 s), the origin and staging, the 301 redirects and DNS |
-| nginx-prometheus-exporter | 9113 | Connections and requests from nginx `stub_status` (`127.0.0.1:8090`) |
-| node-exporter | 9100 | CPU, memory, pressure (PSI), disk (the CT 107 disk), network, systemd units, and the custom `gfilho_*` metrics |
-| `gfilho-metrics.timer` | — | Every 2 min: security.txt expiry, last deploy, backups, CT 107 offline time, pending updates, component versions |
-| `cloudflared` | 20241 | Tunnel connections, requests, errors and QUIC latency (built into cloudflared) |
-| Loki + Alloy | 3100 | nginx access and error logs, and the journal of nginx, cloudflared and logrotate; 14 days |
-| Grafana | 10.10.10.26:3000 (NPM only) | The dashboard `guilhermefilho.com — Monitoring` (the home page), in the `guilhermefilho.com` folder |
-
-The dashboard is provisioned from a file and read-only in Grafana. It is one page, most urgent first; every section is a row you can fold away, and only Logs starts folded. Grafana queries only the panels in view (measured: 21 Prometheus queries and no Loki query per refresh at the top of the page), so the sections further down cost nothing until you scroll to them. Refresh: 1 minute.
-
-| Section | Question it answers | What it shows |
-|---|---|---|
-| *(top)* | Is the site reachable, fast and healthy right now? | Status strip (public site, origin, tunnel links, response time, p95, availability, monitored share of the range, alerts firing) · lifecycle strip (TLS and security.txt expiry, last deploy, host offline 24 h and 7 d) · one uptime line per check · alerts now and alert history (pending and firing) |
-| Latency & traffic | Is it slow, is it failing? | Public response time (log scale) · traffic through the tunnel by status class with proxy errors |
-| Visitors & security | Who uses the site, what fails, what probes it? | Visitor totals (page views, requests, data served, 404, 5xx, 5xx share, log pipeline) · request sources (visitors, probes, tools, local previews, staging, against the nginx total) · responses by status class · error share · data served · top pages, 404s and referrers · clients · status mix · unusual requests |
-| Services | Are nginx, cloudflared, Docker and the metrics timer running? | Services now (state, failed units, restarts, CT uptime) and their history |
-| Cloudflare Tunnel | Is the edge link healthy? | Links, edge RTT, registrations, proxy errors · connected data centres · responses by status code · edge link |
-| Web server & probes | Where does the time go? | nginx vs tunnel request rate · nginx connections · probe time by phase |
-| Host · LXC 107 | Is the container short of something? | CPU & memory, memory, pressure (PSI), disk space, network |
-| Publishing & monitoring | Are deploys, backups and the monitoring itself fine? | Publishing & backups · monitoring pipeline · maintenance · installed versions |
-| Logs *(folded)* | What exactly happened? | nginx errors, service warnings, recent visitor requests, unusual requests (raw lines) |
-
-How to read it:
-
-- **States.** `UP`/`DOWN` come from the probes; `UNKNOWN` means Prometheus cannot reach the probe exporter, and `NO DATA` (grey) means there is no sample at all. A missing value is never shown as zero or as healthy.
-- **Availability** counts only the time monitoring was running; **Monitored** says how much of the selected range that was. Both are needed: with CT 107 off there are no probes at all.
-- **p95** is the 95th percentile of the probe samples (one a minute, from CT 107 on the home network through Cloudflare), not the latency of real visitors. nginx records `request_time` for real requests, but it is 0 ms for 99 % of them (static files), so it is not charted.
-- **Latency colours** follow the web.dev TTFB guidance: good up to 0.8 s, poor above 1.8 s. The probe time includes DNS, connect, TLS and the whole response, so it is never faster than TTFB.
-- **Request rates** are in requests per hour everywhere, so the nginx, tunnel and log figures compare directly.
-- **Visitors** are the lines of the production access log without the monitoring probes (User-Agent `gfilho-monitor`), automated tools (curl, scripts, headless browsers, the self-audit link checker) and local previews. A page view is a visitor request to `/` or `/cases/*/` answered `200` (or `304` from the browser cache). **Clients** splits page views by User-Agent into Bots & tools, Browsers and Unclassified (exclusive groups; a scanner can pretend to be a browser, so Browsers is an upper bound for people). The logs do not record visitor IP addresses, so there are no "unique visitor" figures.
-- **Annotations** (toggles at the top): deploys, host starts (the 10 minutes after each CT boot) and tunnel (re)registrations.
-
-**Alerts.** `monitoring/prometheus/rules.yml` has 15 rules. Besides the site, tunnel and host rules, `ScrapeTargetDown` and `CustomMetricsStale` fire when the data an alert depends on stops arriving (a rule such as `SiteDown` cannot fire without probe results). There is no Alertmanager: the alert list at the top of the dashboard is the notification.
-
-**Changing the dashboard.** Edit `monitoring/grafana/build-dashboard.mjs`, regenerate the JSON with `node monitoring/grafana/build-dashboard.mjs monitoring/grafana/dashboards` (the build stops on overlapping panels, duplicate titles or ids, unknown panel types and localhost links), and run the installer again. Then check it inside CT 107, with the stack running (the tests talk to Grafana on `10.10.10.26:3000`):
-
-```bash
-# alert rules and the trickier dashboard expressions, against synthetic data
-docker exec gfilho-monitoring-prometheus-1 promtool test rules /etc/prometheus/rules.test.yml
-# every query runs through Grafana for 1 h, 24 h and 7 d without errors
-python3 monitoring/tests/check-queries.py
-# the values match independent sources (access logs, Prometheus and cloudflared APIs, openssl, systemctl, /proc, df, journal)
-sudo python3 monitoring/tests/check-values.py
-# how long each query takes and how much log data it reads (write a JSON to compare before/after)
-python3 monitoring/tests/query-timings.py /tmp/timings.json
-```
-
-**When the host is down.** The stack runs inside the same container as the site, so it can only show that the site was down **after** CT 107 comes back (the uptime line has a gap, *Monitored* drops below 100 %, *Host offline* grows). The probes leave from the home network in Portugal, so a local network fault looks like an outage, and they pass the Portugal-only rule. Nothing here can send a notification while the Proxmox host or the home connection is down. For that, add an external uptime monitor for `https://guilhermefilho.com/` (with a monitor located in Portugal, or an exception for it in the WAF rule) and the tunnel health notification in Cloudflare.
-
-The containers restart with Docker when CT 107 starts (`onboot: 1`). To stop the stack: `docker compose -f /opt/gfilho-monitoring/docker-compose.yml down` (add `-v` to delete the stored metrics and logs).
+The Prometheus, Loki and Grafana volumes of the old local stack (`gfilho-monitoring_prometheus`, `_loki`, `_grafana`)
+were kept, unused; `docker volume rm` them when they are no longer wanted.
 
 ## 10. Security
 

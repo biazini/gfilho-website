@@ -6,8 +6,6 @@ delete table inet gfilho
 table inet gfilho {
   chain input {
     type filter hook input priority 0; policy accept;
-    tcp dport 3000 ip saddr 10.10.10.10 accept
-    tcp dport 3000 iifname != "lo" drop
     # exporters, Alloy and the tunnel metrics: only the gfhomelab observability stack (CT 108)
     tcp dport { 9100, 9113, 9115, 12345, 20241 } ip saddr 10.10.10.27 accept
     tcp dport { 9100, 9113, 9115, 12345, 20241 } iifname != "lo" drop
