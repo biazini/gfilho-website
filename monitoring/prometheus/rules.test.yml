@@ -86,18 +86,18 @@ tests:
   # The old changes()-based query never sees a boot (no samples from before it); the new one marks 10 minutes.
   - interval: 1m
     input_series:
-      - series: 'node_boot_time_seconds'
+      - series: 'gfilho_host_boot_time_seconds'
         values: '0x10 _x50 3600x20'
     promql_expr_test:
-      - expr: changes(node_boot_time_seconds[3m]) > 0
+      - expr: changes(gfilho_host_boot_time_seconds[3m]) > 0
         eval_time: 62m
         exp_samples: []
-      - expr: time() - node_boot_time_seconds < 600
+      - expr: time() - gfilho_host_boot_time_seconds < 600
         eval_time: 62m
         exp_samples:
           - labels: '{}'
             value: 120
-      - expr: time() - node_boot_time_seconds < 600
+      - expr: time() - gfilho_host_boot_time_seconds < 600
         eval_time: 75m
         exp_samples: []
 

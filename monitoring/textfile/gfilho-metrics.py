@@ -97,6 +97,8 @@ except Exception:
 upg = [l for l in run(["apt", "list", "--upgradable"]).splitlines() if "/" in l and "upgradable from" in l]
 metric("gfilho_apt_upgradable", "Upgradable packages (local APT cache)", "gauge",
        [({"kind": "all"}, len(upg)), ({"kind": "security"}, sum(1 for l in upg if "-security" in l.split()[0]))])
+# CT start time: node_boot_time_seconds (btime) is the Proxmox host's; lxcfs keeps /proc/uptime per container
+metric("gfilho_host_boot_time_seconds", "When CT 107 last started (from /proc/uptime)", "gauge", [({}, round(time.time() - float(open("/proc/uptime").read().split()[0])))])
 metric("gfilho_reboot_required", "1 when /var/run/reboot-required exists", "gauge", [({}, int(os.path.exists("/var/run/reboot-required")))])
 
 # component versions (shown as a table on the dashboard)

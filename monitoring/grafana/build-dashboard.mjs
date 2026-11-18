@@ -254,7 +254,7 @@ const ANN = {
   builtin: { builtIn: 1, datasource: { type: 'grafana', uid: '-- Grafana --' }, enable: true, hide: true, iconColor: 'rgba(0, 211, 255, 1)', name: 'Annotations & Alerts', type: 'dashboard' },
   deploys: { datasource: PROM, enable: true, iconColor: C.blue, name: 'Deploys', expr: 'changes(gfilho_last_deploy_timestamp_seconds{target="production"}[3m]) > 0', step: '1m', titleFormat: 'Deploy to production', textFormat: 'deploy.sh production' },
   // the 10 minutes after each boot (Prometheus has no samples from before the boot, so changes() would never see it)
-  host: { datasource: PROM, enable: true, iconColor: C.amber, name: 'Host starts', expr: 'time() - node_boot_time_seconds < 600', step: '1m', titleFormat: 'CT 107 started', textFormat: 'CT 107 was not running before this point: the site was offline' },
+  host: { datasource: PROM, enable: true, iconColor: C.amber, name: 'Host starts', expr: 'time() - gfilho_host_boot_time_seconds < 600', step: '1m', titleFormat: 'CT 107 started', textFormat: 'CT 107 was not running before this point: the site was offline' },
   tunnel: { datasource: PROM, enable: true, iconColor: C.teal, name: 'Tunnel registrations', expr: 'changes(cloudflared_tunnel_tunnel_register_success[2m]) > 0', step: '1m', titleFormat: 'Tunnel connection registered', textFormat: 'cloudflared (re)connected to the Cloudflare edge' },
 };
 const LINKS = [
@@ -393,7 +393,7 @@ strip('Services now', 'systemd state of the hosting services (RUNNING, STOPPED o
   { name: 'Failed units', q: prom('sum(node_systemd_unit_state{state="failed"})'), thresholds: ZERO_OK },
   { name: 'nginx restarts', q: prom('node_systemd_service_restart_total{name="nginx.service"}'), thresholds: th([C.green, null], [C.amber, 1]) },
   { name: 'cloudflared restarts', q: prom('node_systemd_service_restart_total{name="cloudflared.service"}'), thresholds: th([C.green, null], [C.amber, 1]) },
-  { name: 'Host running for', q: prom('time() - node_boot_time_seconds'), unit: 'dtdurations' },
+  { name: 'Host running for', q: prom('time() - gfilho_host_boot_time_seconds'), unit: 'dtdurations' },
 ], pos(0, 1, 24, 4), { valueSize: 26 });
 history('Service history', 'State of each hosting service over time, one cell per interval. A cell shows the worst state inside it, so a short outage between two samples is not hidden. Blank = no data.',
   prom(`min by (name) (min_over_time(node_systemd_unit_state{state="active", name=~"${SVCS}"}[$__interval])) - max by (name) (max_over_time(node_systemd_unit_state{state="failed", name=~"${SVCS}"}[$__interval]))`, '{{name}}'), pos(0, 5, 24, 5), SVC, '5m');

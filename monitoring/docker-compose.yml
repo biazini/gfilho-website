@@ -53,6 +53,8 @@ services:
     pid: host
     command:
       - --path.rootfs=/host
+      # the CT's own /proc: lxcfs gives it the container's memory and uptime (the Docker /proc shows the whole host)
+      - --path.procfs=/host/proc
       - --web.listen-address=127.0.0.1:9100
       - --collector.systemd
       - --collector.systemd.unit-include=(nginx|cloudflared|docker|logrotate|gfilho-metrics)\.(service|timer)

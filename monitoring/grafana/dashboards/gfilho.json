@@ -66,7 +66,7 @@
         "enable": true,
         "iconColor": "#FF9830",
         "name": "Host starts",
-        "expr": "time() - node_boot_time_seconds < 600",
+        "expr": "time() - gfilho_host_boot_time_seconds < 600",
         "step": "1m",
         "titleFormat": "CT 107 started",
         "textFormat": "CT 107 was not running before this point: the site was offline"
@@ -3539,7 +3539,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(time() - node_boot_time_seconds) or on() vector(NaN)",
+          "expr": "(time() - gfilho_host_boot_time_seconds) or on() vector(NaN)",
           "legendFormat": ""
         }
       ],
