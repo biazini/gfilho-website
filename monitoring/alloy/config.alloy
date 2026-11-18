@@ -1,4 +1,5 @@
-// Alloy: ships the nginx logs and the journal of the site's services to Loki (127.0.0.1:3100).
+// Alloy: ships the nginx logs and the journal of the site's services to Loki: the local one (127.0.0.1:3100)
+// and the gfhomelab observability stack in CT 108 (10.10.10.27:3100).
 // Labels stay few (job, log, env, unit); fields such as status and path are parsed at query time.
 
 local.file_match "nginx" {
@@ -17,15 +18,55 @@ loki.source.file "nginx" {
 }
 
 loki.process "nginx" {
-  // access log: [20/Oct/2026:16:46:55 +0100]
+  // access log (log_format gfilho):
+  // 85.240.1.2 - - [18/Nov/2026:16:40:18 +0000] "GET / HTTP/1.1" 200 5712 "-" "Mozilla/5.0 ..." rt=0.000 port=8088 ip_country=PT
   stage.match {
     selector = "{log=\"access\"}"
     stage.regex {
-      expression = "\\[(?P<ts>[^\\]]+)\\]"
+      expression = "^(?P<ip>\\S+) - \\S+ \\[(?P<ts>[^\\]]+)\\] \"(?P<method>\\S+) (?P<path>\\S+)[^\"]*\" (?P<status>\\d{3}) (?P<bytes>\\d+) \"(?P<referer>[^\"]*)\" \"(?P<agent>[^\"]*)\"(?: rt=\\S+)?(?: port=\\S+)?(?: ip_country=(?P<country>\\S*))?"
     }
     stage.timestamp {
       source = "ts"
       format = "02/Jan/2006:15:04:05 -0700"
+    }
+    stage.regex {
+      source     = "status"
+      expression = "^(?P<status_digit>\\d)\\d\\d$"
+    }
+    stage.template {
+      source   = "status_class"
+      template = "{{ .status_digit }}xx"
+    }
+    // who asked: human by default; bot by user agent; self = our probes, scripts and the home network
+    stage.static_labels {
+      values = { client = "human" }
+    }
+    stage.match {
+      selector = "{log=\"access\"} |~ \"\\\"[^\\\"]*(?i:bot|crawl|spider|slurp|facebookexternalhit)[^\\\"]*\\\" rt=\""
+      stage.static_labels {
+        values = { client = "bot" }
+      }
+    }
+    stage.match {
+      selector = "{log=\"access\"} |~ \"gfilho-monitor|curl/|[Pp]ython-urllib|HeadlessChrome|Chrome-Lighthouse|self-audit|\\\"node\\\" rt=|^(127\\\\.0\\\\.0\\\\.1|::1|10\\\\.10\\\\.10\\\\.\\\\d+|192\\\\.168\\\\.1\\\\.\\\\d+) \""
+      stage.static_labels {
+        values = { client = "self" }
+      }
+    }
+    stage.labels {
+      values = { status_class = "" }
+    }
+    stage.structured_metadata {
+      values = { method = "", path = "", status = "", country = "" }
+    }
+    stage.metrics {
+      metric.counter {
+        name              = "site_requests_total"
+        description       = "Requests answered by nginx, per client class (human, bot, self) and status class"
+        match_all         = true
+        action            = "inc"
+        max_idle_duration = "24h"
+      }
     }
   }
   // error log: 2026/10/20 14:06:23 [error] ...
@@ -43,7 +84,7 @@ loki.process "nginx" {
       values = { level = "" }
     }
   }
-  forward_to = [loki.write.local.receiver]
+  forward_to = [loki.write.local.receiver, loki.write.ct108.receiver]
 }
 
 loki.relabel "journal" {
@@ -84,11 +125,17 @@ loki.process "journal" {
       values = { level = "lvl" }
     }
   }
-  forward_to = [loki.write.local.receiver]
+  forward_to = [loki.write.local.receiver, loki.write.ct108.receiver]
 }
 
 loki.write "local" {
   endpoint {
     url = "http://127.0.0.1:3100/loki/api/v1/push"
+  }
+}
+
+loki.write "ct108" {
+  endpoint {
+    url = "http://10.10.10.27:3100/loki/api/v1/push"
   }
 }

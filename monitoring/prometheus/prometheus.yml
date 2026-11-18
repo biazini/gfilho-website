@@ -1,4 +1,4 @@
-# Prometheus for guilhermefilho.com (127.0.0.1:9091). Targets are all on loopback.
+# Prometheus for guilhermefilho.com (127.0.0.1:9091). The exporters listen on the CT address 10.10.10.26.
 # Every probe carries a "check" label: the readable name shown on the dashboard.
 global:
   scrape_interval: 30s
@@ -12,19 +12,19 @@ scrape_configs:
     static_configs: [{ targets: ["127.0.0.1:9091"] }]
 
   - job_name: node            # CT 107: CPU, memory, disk, network, systemd units, custom gfilho_* metrics
-    static_configs: [{ targets: ["127.0.0.1:9100"] }]
+    static_configs: [{ targets: ["10.10.10.26:9100"] }]
 
   - job_name: nginx           # stub_status via nginx-prometheus-exporter
-    static_configs: [{ targets: ["127.0.0.1:9113"] }]
+    static_configs: [{ targets: ["10.10.10.26:9113"] }]
 
   - job_name: cloudflared     # built-in metrics server of the tunnel daemon
-    static_configs: [{ targets: ["127.0.0.1:20241"] }]
+    static_configs: [{ targets: ["10.10.10.26:20241"] }]
 
   - job_name: loki
     static_configs: [{ targets: ["127.0.0.1:3100"] }]
 
   - job_name: alloy
-    static_configs: [{ targets: ["127.0.0.1:12345"] }]
+    static_configs: [{ targets: ["10.10.10.26:12345"] }]
 
   # Full public path: DNS -> Cloudflare -> tunnel -> nginx. Fails when any link breaks.
   - job_name: blackbox_public
@@ -38,7 +38,7 @@ scrape_configs:
     relabel_configs: &blackbox_relabel
       - { source_labels: [__address__], target_label: __param_target }
       - { source_labels: [__param_target], target_label: instance }
-      - { target_label: __address__, replacement: "127.0.0.1:9115" }
+      - { target_label: __address__, replacement: "10.10.10.26:9115" }
 
   # nginx directly, without Cloudflare or the tunnel
   - job_name: blackbox_origin

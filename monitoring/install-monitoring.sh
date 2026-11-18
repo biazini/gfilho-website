@@ -66,10 +66,10 @@ if grep -q ' loki/' <<<"$changed"; then compose restart loki >/dev/null && echo 
 if grep -q ' grafana/provisioning/' <<<"$changed"; then compose restart grafana >/dev/null && echo "restart: grafana (provisioning)"; fi
 # dashboards (grafana/dashboards/*.json) need nothing: Grafana reads that folder again every 60 s
 
-# 6. nothing may listen beyond loopback, except Grafana on the CT address (behind the firewall above)
+# 6. nothing may listen beyond loopback, except Grafana, the exporters and Alloy on the CT address (behind the firewall above)
 sleep 15
 ports='3000|3100|9091|9096|9100|9113|9115|12345'
-if ss -H -ltn | awk '{print $4}' | grep -E ":($ports)\$" | grep -vE '^(127\.0\.0\.1|\[::1\]):' | grep -vx '10\.10\.10\.26:3000'; then
+if ss -H -ltn | awk '{print $4}' | grep -E ":($ports)\$" | grep -vE '^(127\.0\.0\.1|\[::1\]):' | grep -vxE '10\.10\.10\.26:(3000|9100|9113|9115|12345)'; then
   echo "ERROR: a monitoring port listens beyond loopback (see above); stopping the stack" >&2
   compose down
   exit 1
