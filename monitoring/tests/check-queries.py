@@ -1,7 +1,7 @@
 # Runs every query of the installed dashboards (and their annotations) through Grafana's /api/ds/query,
 # the way the panels send them, for the last 1 h, 24 h and 7 d. Reports errors, warnings and unexpected
 # empty results. Read-only.
-#   python3 monitoring/tests/check-queries.py [1h|24h|7d ...]     (inside WSL, with the stack running)
+#   python3 monitoring/tests/check-queries.py [1h|24h|7d ...]     (inside the LXC, with the stack running)
 import glob, json, re, sys, time, urllib.request, urllib.error
 
 DIR = "/opt/gfilho-monitoring/grafana/dashboards"

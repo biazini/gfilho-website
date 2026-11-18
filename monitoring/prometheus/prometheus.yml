@@ -1,4 +1,4 @@
-# Prometheus for gfilho.net (127.0.0.1:9091). Targets are all on loopback.
+# Prometheus for guilhermefilho.com (127.0.0.1:9091). Targets are all on loopback.
 # Every probe carries a "check" label: the readable name shown on the dashboard.
 global:
   scrape_interval: 30s
@@ -11,7 +11,7 @@ scrape_configs:
   - job_name: prometheus
     static_configs: [{ targets: ["127.0.0.1:9091"] }]
 
-  - job_name: node            # WSL host: CPU, memory, disk, network, systemd units, custom gfilho_* metrics
+  - job_name: node            # CT 107: CPU, memory, disk, network, systemd units, custom gfilho_* metrics
     static_configs: [{ targets: ["127.0.0.1:9100"] }]
 
   - job_name: nginx           # stub_status via nginx-prometheus-exporter
@@ -32,9 +32,9 @@ scrape_configs:
     metrics_path: /probe
     params: { module: [http_site] }
     static_configs:
-      - { targets: ["https://gfilho.net/"], labels: { check: "Public · Home page" } }
-      - { targets: ["https://gfilho.net/cases/self-healing/"], labels: { check: "Public · Case: self-healing" } }
-      - { targets: ["https://gfilho.net/cases/ascender-k3s/"], labels: { check: "Public · Case: Ascender on k3s" } }
+      - { targets: ["https://guilhermefilho.com/"], labels: { check: "Public · Home page" } }
+      - { targets: ["https://guilhermefilho.com/cases/self-healing/"], labels: { check: "Public · Case: self-healing" } }
+      - { targets: ["https://guilhermefilho.com/cases/ascender-k3s/"], labels: { check: "Public · Case: Ascender on k3s" } }
     relabel_configs: &blackbox_relabel
       - { source_labels: [__address__], target_label: __param_target }
       - { source_labels: [__param_target], target_label: instance }
@@ -55,9 +55,9 @@ scrape_configs:
     metrics_path: /probe
     params: { module: [http_redirect] }
     static_configs:
-      - { targets: ["http://gfilho.net/"], labels: { check: "Redirect · HTTP → HTTPS" } }
-      - { targets: ["https://www.gfilho.net/"], labels: { check: "Redirect · www → apex" } }
-      - { targets: ["https://gfilho.net/cases/self-healing"], labels: { check: "Redirect · Trailing slash" } }
+      - { targets: ["http://guilhermefilho.com/"], labels: { check: "Redirect · HTTP → HTTPS" } }
+      - { targets: ["https://www.guilhermefilho.com/"], labels: { check: "Redirect · www → apex" } }
+      - { targets: ["https://guilhermefilho.com/cases/self-healing"], labels: { check: "Redirect · Trailing slash" } }
     relabel_configs: *blackbox_relabel
 
   - job_name: blackbox_dns

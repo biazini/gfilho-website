@@ -1,7 +1,7 @@
 # Compares what the dashboards show (their queries, run through Grafana for the last 24 h) with
 # independent sources: the nginx access logs parsed here, the Prometheus and cloudflared APIs, the
 # stub_status page, openssl, systemctl, /proc, df, the backups folder and the systemd journal. Read-only.
-#   sudo python3 monitoring/tests/check-values.py   (inside WSL, with the stack running)
+#   sudo python3 monitoring/tests/check-values.py   (inside the LXC, with the stack running)
 import glob, json, os, re, subprocess, time, urllib.parse, urllib.request, datetime as dt
 from collections import Counter
 
@@ -148,24 +148,24 @@ for key, n in unusual.most_common(2):
 # ---------------------------------------------------------------- overview: probes, tunnel, lifecycle
 def code(url):
     return sh(f"curl -s -o /dev/null -w '%{{http_code}}' -A gfilho-monitor/1.0 {url}")
-pages = ["https://gfilho.net/", "https://gfilho.net/cases/self-healing/", "https://gfilho.net/cases/ascender-k3s/"]
+pages = ["https://guilhermefilho.com/", "https://guilhermefilho.com/cases/self-healing/", "https://guilhermefilho.com/cases/ascender-k3s/"]
 check("Public site (1 = all pages UP)", one("Status", "A"), 1.0 if all(code(u) == "200" for u in pages) else 0.0)
 check("Origin (1 = UP)", one("Status", "B"), 1.0 if code("http://127.0.0.1:8088/") == "200" else 0.0)
 cf = urllib.request.urlopen("http://127.0.0.1:20241/metrics", timeout=10).read().decode()
 check("Tunnel links", one("Status", "C"), float(re.search(r"^cloudflared_tunnel_ha_connections (\S+)", cf, re.M).group(1)))
-rt = float(sh("curl -s -o /dev/null -w '%{time_total}' -A gfilho-monitor/1.0 https://gfilho.net/"))
+rt = float(sh("curl -s -o /dev/null -w '%{time_total}' -A gfilho-monitor/1.0 https://guilhermefilho.com/"))
 check("Response time (s, ballpark)", one("Status", "D"), rt, tol=0.25)
 # raw probe samples of the last 24 h, straight from Prometheus, aggregated here
-raw = prom('probe_duration_seconds{job="blackbox_public", instance="https://gfilho.net/"}[24h]')
+raw = prom('probe_duration_seconds{job="blackbox_public", instance="https://guilhermefilho.com/"}[24h]')
 def quantile(q, vs):
     vs = sorted(vs); rank = q * (len(vs) - 1); lo = int(rank); hi = min(lo + 1, len(vs) - 1)
     return vs[lo] + (vs[hi] - vs[lo]) * (rank - lo)
 check("p95 response time (24 h, s)", one("Status", "E"), max(quantile(0.95, [float(v) for _, v in s["values"]]) for s in raw), tol=0.02, rel=True)
-succ = [float(v) for s in prom('probe_success{job="blackbox_public", instance="https://gfilho.net/"}[24h]') for _, v in s["values"]]
+succ = [float(v) for s in prom('probe_success{job="blackbox_public", instance="https://guilhermefilho.com/"}[24h]') for _, v in s["values"]]
 check("Availability (24 h, while monitored)", one("Status", "F"), sum(succ) / len(succ), tol=0.002)
 check("Monitored share of 24 h", one("Status", "G"), min(1.0, len(succ) / 1440), tol=0.01)
 check("Alerts firing", one("Status", "H"), float(sum(1 for a in api("http://127.0.0.1:9091/api/v1/alerts")["data"]["alerts"] if a["state"] == "firing")))
-na = sh("echo | openssl s_client -connect gfilho.net:443 -servername gfilho.net 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2")
+na = sh("echo | openssl s_client -connect guilhermefilho.com:443 -servername guilhermefilho.com 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2")
 cert_left = dt.datetime.strptime(na, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc).timestamp() - time.time()
 check("TLS certificate (days left)", (one("Lifecycle", "A") or 0) / 86400, cert_left / 86400, tol=0.1, fmt=lambda x: f"{x:.2f}")
 exp = re.search(r"^Expires:\s*(\S+)", open("/var/www/html/.well-known/security.txt").read(), re.M).group(1)
@@ -178,7 +178,7 @@ boots = json.loads(sh("journalctl --list-boots -o json"))
 rng = sorted((int(b["first_entry"]) / 1e6, int(b["last_entry"]) / 1e6) for b in boots)
 start = NOW - 86400
 off = sum(max(0.0, s2 - max(e1, start)) for (_s1, e1), (s2, _e2) in zip(rng, rng[1:]) if s2 > start)
-check("WSL offline 24 h (s)", one("Lifecycle", "D"), off, tol=300)
+check("Host offline 24 h (s)", one("Lifecycle", "D"), off, tol=300)
 
 # ---------------------------------------------------------------- infrastructure
 def unit(name):
@@ -187,7 +187,7 @@ def unit(name):
 for ref, name in zip("ABCD", ("nginx.service", "cloudflared.service", "docker.service", "gfilho-metrics.timer")):
     check(f"Service · {name}", one("Services now", ref), unit(name))
 check("Failed units", one("Services now", "E"), float(len([l for l in sh("systemctl --failed --no-legend --plain").splitlines() if re.match(r"(nginx|cloudflared|docker|logrotate|gfilho-metrics)\.", l)])))
-check("WSL running for (s)", one("Services now", "H"), float(open("/proc/uptime").read().split()[0]), tol=120)
+check("Host running for (s)", one("Services now", "H"), float(open("/proc/uptime").read().split()[0]), tol=120)
 check("Tunnel links (infra)", one("Tunnel now", "A"), float(re.search(r"^cloudflared_tunnel_ha_connections (\S+)", cf, re.M).group(1)))
 rtts = [float(v) for v in re.findall(r"^quic_client_smoothed_rtt\{[^}]*\} (\S+)", cf, re.M)]
 check("Edge RTT (ms, average)", one("Tunnel now", "B"), sum(rtts) / len(rtts) if rtts else None, tol=15)
@@ -197,7 +197,7 @@ stub = urllib.request.urlopen("http://127.0.0.1:8090/stub_status", timeout=10).r
 check("nginx active connections", one("nginx connections", "A"), float(re.search(r"Active connections: (\d+)", stub).group(1)), tol=2)
 mem = sh("free -b | awk '/^Mem:/ {print $2 - $7}'")
 check("Memory used (bytes)", one("Memory", "A"), float(mem), tol=0.05, rel=True)
-for ref, mp in (("A", "/"), ("B", "/mnt/c")):
+for ref, mp in (("A", "/"),):
     df = sh(f"df -B1 --output=used,size,avail {mp} | tail -1").split()
     check(f"Disk used {mp} (share, like df)", one("Disk space", ref), int(df[0]) / (int(df[0]) + int(df[2])), tol=0.002)
 files = int(sh("find /var/www/html -type f -o -type l | wc -l"))

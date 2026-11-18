@@ -1,7 +1,7 @@
 # Times every query of the installed dashboards through Grafana's /api/ds/query, the way the panels
 # send them, for 1 h, 24 h and 7 d. Loki queries also report the bytes and lines Loki had to read.
 # Read-only. Writes the raw numbers to the JSON file given as argument (for before/after comparisons).
-#   python3 monitoring/tests/query-timings.py [timings.json]      (inside WSL, with the stack running)
+#   python3 monitoring/tests/query-timings.py [timings.json]      (inside the LXC, with the stack running)
 import glob, json, re, statistics, sys, time, urllib.request
 
 DIR = "/opt/gfilho-monitoring/grafana/dashboards"

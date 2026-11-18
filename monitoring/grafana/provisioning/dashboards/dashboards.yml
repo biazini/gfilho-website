@@ -1,7 +1,7 @@
 apiVersion: 1
 providers:
   - name: gfilho
-    folder: gfilho.net
+    folder: guilhermefilho.com
     type: file
     disableDeletion: false     # a JSON file removed from the repository removes its dashboard too (no orphans)
     allowUiUpdates: false

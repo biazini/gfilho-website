@@ -1,0 +1,12 @@
+# Installed as /etc/nftables.d/gfilho.nft by monitoring/install-monitoring.sh (included from /etc/nftables.conf).
+# Grafana listens on 10.10.10.26:3000 so the Nginx Proxy Manager (LXC 100, 10.10.10.10) can publish it as
+# https://grafana.lab.guilhermefilho.com. Nothing else on the network may reach it.
+table inet gfilho
+delete table inet gfilho
+table inet gfilho {
+  chain input {
+    type filter hook input priority 0; policy accept;
+    tcp dport 3000 ip saddr 10.10.10.10 accept
+    tcp dport 3000 iifname != "lo" drop
+  }
+}

@@ -1,7 +1,7 @@
-// Source of the provisioned (read-only) gfilho.net dashboard, monitoring/grafana/dashboards/gfilho.json
+// Source of the provisioned (read-only) guilhermefilho.com dashboard, monitoring/grafana/dashboards/gfilho.json
 // (uid gfilho-overview, the Grafana home page). One page, most urgent first: status, lifecycle, uptime and
 // alerts at the top, then the sections Latency & traffic, Visitors & security, Services, Cloudflare Tunnel,
-// Web server & probes, Host · WSL, Publishing & monitoring, and Logs (collapsed). Grafana only queries the
+// Web server & probes, Host · LXC 107, Publishing & monitoring, and Logs (collapsed). Grafana only queries the
 // panels in view, so the sections further down cost nothing until you scroll to them.
 // Edit this file, then regenerate the JSON and reinstall:
 //   node monitoring/grafana/build-dashboard.mjs monitoring/grafana/dashboards
@@ -210,7 +210,7 @@ function logs(title, description, expr, gridPos) {
 
 // ---------------------------------------------------------------- shared PromQL pieces
 const PUBLIC = 'job="blackbox_public"';
-const HOME = 'instance="https://gfilho.net/"';
+const HOME = 'instance="https://guilhermefilho.com/"';
 const ORIGIN = 'job="blackbox_origin", instance="http://127.0.0.1:8088/"';
 const SVCS = 'nginx.service|cloudflared.service|docker.service|gfilho-metrics.timer';
 const NET = 'device=~"eth[0-9]+"';                        // physical (mirrored) interfaces only; loopback0 carries localhost traffic
@@ -254,12 +254,12 @@ const ANN = {
   builtin: { builtIn: 1, datasource: { type: 'grafana', uid: '-- Grafana --' }, enable: true, hide: true, iconColor: 'rgba(0, 211, 255, 1)', name: 'Annotations & Alerts', type: 'dashboard' },
   deploys: { datasource: PROM, enable: true, iconColor: C.blue, name: 'Deploys', expr: 'changes(gfilho_last_deploy_timestamp_seconds{target="production"}[3m]) > 0', step: '1m', titleFormat: 'Deploy to production', textFormat: 'deploy.sh production' },
   // the 10 minutes after each boot (Prometheus has no samples from before the boot, so changes() would never see it)
-  wsl: { datasource: PROM, enable: true, iconColor: C.amber, name: 'WSL starts', expr: 'time() - node_boot_time_seconds < 600', step: '1m', titleFormat: 'WSL started', textFormat: 'WSL was not running before this point: the site was offline' },
+  host: { datasource: PROM, enable: true, iconColor: C.amber, name: 'Host starts', expr: 'time() - node_boot_time_seconds < 600', step: '1m', titleFormat: 'CT 107 started', textFormat: 'CT 107 was not running before this point: the site was offline' },
   tunnel: { datasource: PROM, enable: true, iconColor: C.teal, name: 'Tunnel registrations', expr: 'changes(cloudflared_tunnel_tunnel_register_success[2m]) > 0', step: '1m', titleFormat: 'Tunnel connection registered', textFormat: 'cloudflared (re)connected to the Cloudflare edge' },
 };
 const LINKS = [
   { title: 'Alert rules', url: '/alerting/list', type: 'link', targetBlank: false, icon: 'bolt', keepTime: false },
-  { title: 'Live site', url: 'https://gfilho.net/', type: 'link', targetBlank: true, icon: 'external link' },
+  { title: 'Live site', url: 'https://guilhermefilho.com/', type: 'link', targetBlank: true, icon: 'external link' },
   { title: 'Runbook (README → Monitoring)', url: 'https://github.com/biazini/gfilho-website#9-monitoring', type: 'link', targetBlank: true, icon: 'doc' },
 ];
 
@@ -268,7 +268,7 @@ const KNOWN_TYPES = new Set(['alertlist', 'barchart', 'logs', 'piechart', 'row',
 const dashboards = [];
 function finish(file, meta) {
   const d = {
-    uid: meta.uid, title: meta.title, description: meta.description, tags: ['gfilho.net', 'website'], timezone: 'browser', editable: false, graphTooltip: 1,
+    uid: meta.uid, title: meta.title, description: meta.description, tags: ['guilhermefilho.com', 'website'], timezone: 'browser', editable: false, graphTooltip: 1,
     schemaVersion: 42, version: 4, time: { from: 'now-24h', to: 'now' }, refresh: meta.refresh, fiscalYearStartMonth: 0, liveNow: false, weekStart: '',
     timepicker: { refresh_intervals: ['1m', '5m', '15m', '30m', '1h'] }, templating: { list: [] },
     annotations: { list: [ANN.builtin, ...meta.annotations] }, links: LINKS, panels: B.top,
@@ -310,7 +310,7 @@ const ALERT_STATE = map([[1, 'Pending', C.amber], [2, 'Firing', C.red]]);
 
 // ================================================================ status (top, no row: always open)
 board();
-strip('Status', 'Is the site reachable right now? Public site = all public pages pass from the internet (DNS → Cloudflare → tunnel → nginx); Origin = nginx answered directly. Public DOWN with Origin UP points at Cloudflare or the tunnel; both DOWN at nginx or WSL. UNKNOWN = Prometheus cannot reach the probe exporter. Response time colours follow the web.dev TTFB guidance (0.8 s / 1.8 s). p95, Availability and Monitored cover the selected range; Availability counts only the time monitoring was running, and Monitored says how much of the range that was (below 100 % = WSL or the stack was off). The probes run from this PC, so a local network fault looks like an outage: pair this with an external uptime monitor (README → Monitoring).', [
+strip('Status', 'Is the site reachable right now? Public site = all public pages pass from the internet (DNS → Cloudflare → tunnel → nginx); Origin = nginx answered directly. Public DOWN with Origin UP points at Cloudflare or the tunnel; both DOWN at nginx or CT 107. UNKNOWN = Prometheus cannot reach the probe exporter. Response time colours follow the web.dev TTFB guidance (0.8 s / 1.8 s). p95, Availability and Monitored cover the selected range; Availability counts only the time monitoring was running, and Monitored says how much of the range that was (below 100 % = CT 107 or the stack was off). The probes run from the home network (CT 107 on Proxmox), so a local network fault looks like an outage: pair this with an external uptime monitor (README → Monitoring).', [
   { name: 'Public site', q: prom(probeState(PUBLIC)), mappings: PROBE, thresholds: PROBE_TH },
   { name: 'Origin', q: prom(probeState(ORIGIN)), mappings: PROBE, thresholds: PROBE_TH },
   { name: 'Tunnel links', q: prom('cloudflared_tunnel_ha_connections or up{job="cloudflared"} * 0'), thresholds: th([C.red, null], [C.amber, 1], [C.green, 4]) },
@@ -320,21 +320,21 @@ strip('Status', 'Is the site reachable right now? Public site = all public pages
   { name: 'Monitored', q: prom(`clamp_max(sum(count_over_time(probe_success{${PUBLIC}, ${HOME}}[$__range])) / ($__range_s / 60), 1)`), unit: 'percentunit', decimals: 1, thresholds: th([C.amber, null], [C.green, 0.995]) },
   { name: 'Alerts firing', q: prom('count(ALERTS{alertstate="firing"}) or vector(0)'), thresholds: ZERO_OK },
 ], pos(0, 0, 24, 4), { valueSize: 30 });
-strip('Lifecycle', 'Time left until the TLS certificate (earliest expiry among every HTTPS address probed; Cloudflare renews it) and /.well-known/security.txt expire (renew it before 30 days: the SecurityTxtExpiringSoon alert fires then). WSL offline = time WSL was not running, from the systemd journal: the site was down then.', [
+strip('Lifecycle', 'Time left until the TLS certificate (earliest expiry among every HTTPS address probed; Cloudflare renews it) and /.well-known/security.txt expire (renew it before 30 days: the SecurityTxtExpiringSoon alert fires then). Host offline = time CT 107 was not running, from the systemd journal: the site was down then.', [
   { name: 'TLS certificate expires in', q: prom('min(probe_ssl_earliest_cert_expiry{job=~"blackbox_public|blackbox_redirects"}) - time()'), unit: 'dtdurations', thresholds: th([C.red, null], [C.amber, 14 * DAY], [C.green, 30 * DAY]) },
   { name: 'security.txt expires in', q: prom('gfilho_security_txt_expires_timestamp_seconds - time()'), unit: 'dtdurations', thresholds: th([C.red, null], [C.amber, 30 * DAY], [C.green, 60 * DAY]) },
   { name: 'Last deploy', q: prom('time() - gfilho_last_deploy_timestamp_seconds{target="production"}'), unit: 'dtdurations' },
-  { name: 'WSL offline · 24 h', q: prom('gfilho_wsl_offline_seconds{window="24h"}'), unit: 'dtdurations', thresholds: th([C.green, null], [C.amber, 60]) },
-  { name: 'WSL offline · 7 d', q: prom('gfilho_wsl_offline_seconds{window="7d"}'), unit: 'dtdurations', thresholds: th([C.green, null], [C.amber, 60]) },
+  { name: 'Host offline · 24 h', q: prom('gfilho_host_offline_seconds{window="24h"}'), unit: 'dtdurations', thresholds: th([C.green, null], [C.amber, 60]) },
+  { name: 'Host offline · 7 d', q: prom('gfilho_host_offline_seconds{window="7d"}'), unit: 'dtdurations', thresholds: th([C.green, null], [C.amber, 60]) },
 ], pos(0, 4, 24, 3), { valueSize: 17, titleSize: 11 });
-timeline('Uptime', 'Every check as one status line. Green = OK, red = failing, blank = no data (WSL or the monitoring stack was not running). Public pages every 60 s, origin and staging every 30 s, 301 redirects and DNS every 5 min.',
+timeline('Uptime', 'Every check as one status line. Green = OK, red = failing, blank = no data (CT 107 or the monitoring stack was not running). Public pages every 60 s, origin and staging every 30 s, 301 redirects and DNS every 5 min.',
   [prom('probe_success{check!=""}', '{{check}}')], pos(0, 7, 24, 7), OKFAIL).transparent = true;
 alertList('Alerts now', 'Firing and pending Prometheus alerts (monitoring/prometheus/rules.yml). There is no Alertmanager: nothing is sent anywhere, this list is the notification.', pos(0, 14, 8, 7));
 timeline('Alert history', 'When each alert was pending (amber: the condition is true but its "for" time has not passed yet) or firing (red) in the selected range, one line per alert.',
   [prom('max by (alertname, severity) (ALERTS{alertstate="firing"}) * 2 or max by (alertname, severity) (ALERTS{alertstate="pending"})', '{{alertname}} · {{severity}}')], pos(8, 14, 16, 7), ALERT_STATE,
   { noValue: 'No alerts in this period', thresholds: th([C.amber, null], [C.red, 2]) });
 row('Latency & traffic', 21);
-area('Public response time', 'Total time of each probe: the public pages through Cloudflare and the tunnel, and nginx answered directly (origin). Logarithmic axis, so both are readable; dashed line = 0.8 s (web.dev "good" TTFB). These are synthetic probes from this PC, not the latency of real visitors.',
+area('Public response time', 'Total time of each probe: the public pages through Cloudflare and the tunnel, and nginx answered directly (origin). Logarithmic axis, so both are readable; dashed line = 0.8 s (web.dev "good" TTFB). These are synthetic probes from CT 107 on the home network, not the latency of real visitors.',
   [prom('max by (check) (probe_duration_seconds{job=~"blackbox_public|blackbox_origin", check!=""})', '{{check}}')], pos(0, 22, 12, 8), { unit: 's', fill: 6, log: true, thresholdLine: [0.8, C.amber] });
 area('Traffic through the tunnel', 'Every request that reached the site from the internet (visitors, bots and the public probes) by HTTP status class, from cloudflared, plus requests cloudflared could not deliver to nginx (red, should stay at 0). Visitors only: the Visitors & security section below.',
   [prom('sum by (class) (label_replace(rate(cloudflared_tunnel_response_by_code[$__rate_interval]), "class", "${1}xx", "status_code", "(.)..")) * 3600', '{{class}}'),
@@ -385,7 +385,7 @@ rankTable('Unusual requests', 'Visitor requests worth a look: methods other than
 // ================================================================ infrastructure: services, tunnel, web server, host, publishing
 below();
 row('Services', 0);
-strip('Services now', 'systemd state of the hosting services (RUNNING, STOPPED or FAILED; NO DATA = node-exporter is not answering), units in a failed state, times systemd restarted nginx or cloudflared after a crash (Restart=on-failure) since WSL started, and how long WSL has been running.', [
+strip('Services now', 'systemd state of the hosting services (RUNNING, STOPPED or FAILED; NO DATA = node-exporter is not answering), units in a failed state, times systemd restarted nginx or cloudflared after a crash (Restart=on-failure) since CT 107 started, and how long CT 107 has been running.', [
   { name: 'nginx', q: prom(unitState('nginx.service')), mappings: SVC, thresholds: SVC_TH },
   { name: 'cloudflared', q: prom(unitState('cloudflared.service')), mappings: SVC, thresholds: SVC_TH },
   { name: 'Docker', q: prom(unitState('docker.service')), mappings: SVC, thresholds: SVC_TH },
@@ -393,7 +393,7 @@ strip('Services now', 'systemd state of the hosting services (RUNNING, STOPPED o
   { name: 'Failed units', q: prom('sum(node_systemd_unit_state{state="failed"})'), thresholds: ZERO_OK },
   { name: 'nginx restarts', q: prom('node_systemd_service_restart_total{name="nginx.service"}'), thresholds: th([C.green, null], [C.amber, 1]) },
   { name: 'cloudflared restarts', q: prom('node_systemd_service_restart_total{name="cloudflared.service"}'), thresholds: th([C.green, null], [C.amber, 1]) },
-  { name: 'WSL running for', q: prom('time() - node_boot_time_seconds'), unit: 'dtdurations' },
+  { name: 'Host running for', q: prom('time() - node_boot_time_seconds'), unit: 'dtdurations' },
 ], pos(0, 1, 24, 4), { valueSize: 26 });
 history('Service history', 'State of each hosting service over time, one cell per interval. A cell shows the worst state inside it, so a short outage between two samples is not hidden. Blank = no data.',
   prom(`min by (name) (min_over_time(node_systemd_unit_state{state="active", name=~"${SVCS}"}[$__interval])) - max by (name) (max_over_time(node_systemd_unit_state{state="failed", name=~"${SVCS}"}[$__interval]))`, '{{name}}'), pos(0, 5, 24, 5), SVC, '5m');
@@ -426,20 +426,20 @@ area('Request rate · nginx vs tunnel', 'Requests per hour counted by nginx on a
 area('nginx connections', 'Open client connections in nginx (stub_status): reading the request, writing the response, idle keep-alive.',
   [prom('nginx_connections_active'), prom('nginx_connections_reading'), prom('nginx_connections_writing'), prom('nginx_connections_waiting')], pos(8, 24, 8, 8),
   { names: ['Active', 'Reading', 'Writing', 'Idle (keep-alive)'], decimals: 0 });
-area('Response time by phase', 'Where the time of the probe to https://gfilho.net/ goes (stacked; the total is the probe time): DNS, connect, TLS, processing (Cloudflare edge → tunnel → nginx until the first byte) and transfer.',
+area('Response time by phase', 'Where the time of the probe to https://guilhermefilho.com/ goes (stacked; the total is the probe time): DNS, connect, TLS, processing (Cloudflare edge → tunnel → nginx until the first byte) and transfer.',
   [prom(`max by (phase) (probe_http_duration_seconds{${PUBLIC}, ${HOME}})`, '{{phase}}')], pos(16, 24, 8, 8), { unit: 's', stack: true, fill: 22 });
-row('Host · WSL', 32);
-area('CPU & memory', 'Busy CPU (everything but idle) and memory in use (total minus available) of the WSL VM, which the Ascender lab shares.',
+row('Host · LXC 107', 32);
+area('CPU & memory', 'Busy CPU (everything but idle) and memory in use (total minus available) of CT 107 (its own limits: 2 cores, 2 GB).',
   [prom('1 - avg(rate(node_cpu_seconds_total{mode="idle"}[$__rate_interval]))', 'CPU'), prom('1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes', 'Memory')], pos(0, 33, 8, 8),
   { unit: 'percentunit', max: 1 });
-area('Memory', 'Used and available memory in the WSL VM (stacked: the top is the total).',
+area('Memory', 'Used and available memory in CT 107 (stacked: the top is the total).',
   [prom('node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes'), prom('node_memory_MemAvailable_bytes')], pos(8, 33, 8, 8),
   { unit: 'bytes', stack: true, fill: 22, names: ['Used', 'Available'] });
-area('Pressure (PSI)', 'Linux pressure stall information: share of time at least one task had to wait for CPU, memory or I/O. Sustained values mean the VM is short of that resource even when the usage figures look fine.',
+area('Pressure (PSI)', 'Linux pressure stall information: share of time at least one task had to wait for CPU, memory or I/O. Sustained values mean the container is short of that resource even when the usage figures look fine.',
   [prom('rate(node_pressure_cpu_waiting_seconds_total[$__rate_interval])'), prom('rate(node_pressure_memory_waiting_seconds_total[$__rate_interval])'), prom('rate(node_pressure_io_waiting_seconds_total[$__rate_interval])')], pos(16, 33, 8, 8),
   { unit: 'percentunit', softMax: 0.05, names: ['CPU', 'Memory', 'I/O'] });
-area('Disk space', 'Used space, computed like df. "/" is the WSL virtual disk: it reports 1 TB but grows inside a file on the Windows drive C:, so C: is the real limit. Dashed line: 90 % (DiskAlmostFull and HostDriveAlmostFull fire at 10 % free).',
-  [prom(dfUsed('/'), '/ (WSL virtual disk)'), prom(dfUsed('/mnt/c'), 'C: (Windows drive holding the virtual disk)')], pos(0, 41, 12, 8),
+area('Disk space', 'Used space of the CT 107 disk (16 GB on local-lvm), computed like df. Dashed line: 90 % (DiskAlmostFull fires at 10 % free).',
+  [prom(dfUsed('/'), '/ (CT 107 disk)')], pos(0, 41, 12, 8),
   { unit: 'percentunit', max: 1, thresholdLine: [0.9, C.red] });
 area('Network', 'Traffic on the physical network interfaces (eth*); localhost, Docker and Kubernetes interfaces are left out.',
   [prom(`sum(rate(node_network_receive_bytes_total{${NET}}[$__rate_interval]))`), prom(`sum(rate(node_network_transmit_bytes_total{${NET}}[$__rate_interval]))`)], pos(12, 41, 12, 8),
@@ -470,8 +470,8 @@ logs('nginx errors', 'nginx error.log, without what scanners cause on purpose: a
 logs('Service warnings', 'Warnings and errors from cloudflared, nginx, logrotate and the metrics timer (systemd journal).', '{job="systemd-journal"} |~ "(?i)(err|warn|fail)"', pos(12, 59, 12, 10));
 logs('Recent visitor requests', 'Latest visitor requests to production, without monitoring probes and automated tools.', ACC, pos(0, 69, 24, 10));
 logs('Unusual requests · raw lines', 'The full access-log lines behind "Unusual requests".', `${ACC} ${PAT} ${UNUSUAL}`, pos(0, 79, 24, 10));
-finish('gfilho.json', { uid: 'gfilho-overview', title: 'gfilho.net — Monitoring', refresh: '1m', annotations: [ANN.deploys, ANN.wsl, ANN.tunnel],
-  description: 'gfilho.net on one page: status, lifecycle, uptime and alerts first, then latency and traffic, visitors and security, services, tunnel, web server, host, publishing and logs' });
+finish('gfilho.json', { uid: 'gfilho-overview', title: 'guilhermefilho.com — Monitoring', refresh: '1m', annotations: [ANN.deploys, ANN.host, ANN.tunnel],
+  description: 'guilhermefilho.com on one page: status, lifecycle, uptime and alerts first, then latency and traffic, visitors and security, services, tunnel, web server, host, publishing and logs' });
 
 // ---------------------------------------------------------------- write
 const titles = new Set();

@@ -1,4 +1,4 @@
-# Alert rules for gfilho.net. There is no Alertmanager: firing and pending alerts are shown on the
+# Alert rules for guilhermefilho.com. There is no Alertmanager: firing and pending alerts are shown on the
 # top of the Grafana dashboard ("Alerts now", "Alert history"). For notifications while the whole PC is
 # off, use an external uptime monitor as well (see README, "Monitoring").
 # Unit tests: rules.test.yml (promtool, see README).
@@ -33,10 +33,10 @@ groups:
         expr: probe_success{job="blackbox_dns"} == 0
         for: 10m
         labels: { severity: warning, component: dns }
-        annotations: { summary: "gfilho.net does not resolve via {{ $labels.instance }}" }
+        annotations: { summary: "guilhermefilho.com does not resolve via {{ $labels.instance }}" }
 
       - alert: TlsCertificateExpiringSoon
-        expr: (probe_ssl_earliest_cert_expiry{instance="https://gfilho.net/"} - time()) / 86400 < 14
+        expr: (probe_ssl_earliest_cert_expiry{instance="https://guilhermefilho.com/"} - time()) / 86400 < 14
         for: 1h
         labels: { severity: warning, component: tls }
         annotations: { summary: "TLS certificate expires in less than 14 days" }
@@ -77,14 +77,8 @@ groups:
         expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.10
         for: 15m
         labels: { severity: warning, component: host }
-        annotations: { summary: "WSL disk has less than 10 % free" }
+        annotations: { summary: "CT 107 disk has less than 10 % free" }
 
-      # The WSL virtual disk ("/" above, 1 TB) is a file on C: and can only grow while C: has room.
-      - alert: HostDriveAlmostFull
-        expr: node_filesystem_avail_bytes{mountpoint="/mnt/c"} / node_filesystem_size_bytes{mountpoint="/mnt/c"} < 0.10
-        for: 15m
-        labels: { severity: warning, component: host }
-        annotations: { summary: "Windows drive C: (holds the WSL virtual disk) has less than 10 % free" }
 
       - alert: SecurityUpdatesPending
         expr: gfilho_apt_upgradable{kind="security"} > 0
@@ -106,4 +100,4 @@ groups:
         expr: time() - gfilho_metrics_last_run_timestamp_seconds > 600
         for: 5m
         labels: { severity: warning, component: monitoring }
-        annotations: { summary: "gfilho-metrics.timer has not run for 10 minutes: security.txt, updates, backups and WSL figures are stale" }
+        annotations: { summary: "gfilho-metrics.timer has not run for 10 minutes: security.txt, updates, backups and host offline figures are stale" }

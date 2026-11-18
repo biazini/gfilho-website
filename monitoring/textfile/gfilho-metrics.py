@@ -77,7 +77,7 @@ metric("gfilho_backup_bytes", "Total size of /var/backups/gfilho", "gauge", [({}
 metric("gfilho_last_deploy_timestamp_seconds", "Time of the latest deploy (its backup snapshot) by target", "gauge",
        [({"target": k}, v) for k, v in sorted(last.items()) if k in ("production", "staging", "nginx")])
 
-# WSL availability from the journal: time with no running boot = website offline
+# CT 107 availability from the journal: time with no running boot = website offline
 try:
     boots = json.loads(run(["journalctl", "--list-boots", "-o", "json"]) or "[]")
     ranges = sorted((int(b["first_entry"]) / 1e6, int(b["last_entry"]) / 1e6) for b in boots)
@@ -88,8 +88,8 @@ try:
         off = sum(max(0.0, s2 - max(e1, start)) for (_s1, e1), (s2, _e2) in zip(ranges, ranges[1:]) if s2 > start)
         samples_off.append(({"window": window}, round(off)))
         samples_boots.append(({"window": window}, sum(1 for s, _e in ranges if s > start)))
-    metric("gfilho_wsl_offline_seconds", "Time WSL was not running (website offline) in the window", "gauge", samples_off)
-    metric("gfilho_wsl_boots", "WSL boots started in the window", "gauge", samples_boots)
+    metric("gfilho_host_offline_seconds", "Time CT 107 was not running (website offline) in the window", "gauge", samples_off)
+    metric("gfilho_host_boots", "CT 107 boots started in the window", "gauge", samples_boots)
 except Exception:
     pass
 

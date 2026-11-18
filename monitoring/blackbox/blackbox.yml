@@ -36,7 +36,7 @@ modules:
     prober: dns
     timeout: 5s
     dns:
-      query_name: gfilho.net
+      query_name: guilhermefilho.com
       query_type: A
       valid_rcodes: [NOERROR]
       preferred_ip_protocol: ip4

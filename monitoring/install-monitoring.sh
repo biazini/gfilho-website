@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install or update the local monitoring stack for gfilho.net (run inside WSL as root).
+# Install or update the local monitoring stack for guilhermefilho.com (run inside the LXC as root).
 #
 #   sudo monitoring/install-monitoring.sh
 #
@@ -38,7 +38,16 @@ systemctl enable --now gfilho-metrics.timer >/dev/null
 systemctl start gfilho-metrics.service
 echo "metrics: $(grep -c '^gfilho_' /var/lib/gfilho-monitoring/textfile/gfilho.prom) gfilho_* samples"
 
-# 4. containers (restart: unless-stopped, so they come back with Docker when WSL starts)
+# 4. firewall before Grafana starts: only the NPM (10.10.10.10) may reach 10.10.10.26:3000
+command -v nft >/dev/null || { echo "nftables is required (apt install nftables)" >&2; exit 1; }
+install -D -m 644 "$here/nftables/gfilho.nft" /etc/nftables.d/gfilho.nft
+grep -q '^include "/etc/nftables.d/\*.nft"' /etc/nftables.conf || echo 'include "/etc/nftables.d/*.nft"' >> /etc/nftables.conf
+systemctl enable nftables >/dev/null 2>&1
+nft -f /etc/nftables.d/gfilho.nft
+nft list table inet gfilho >/dev/null || { echo "ERROR: nftables table inet gfilho not loaded; not starting Grafana" >&2; exit 1; }
+echo "firewall: Grafana :3000 open to 10.10.10.10 only"
+
+# 5. containers (restart: unless-stopped, so they come back with Docker when the container starts)
 compose() { docker compose -f "$dest/docker-compose.yml" "$@"; }
 compose pull --quiet
 compose up -d --remove-orphans
@@ -53,13 +62,13 @@ if grep -q ' loki/' <<<"$changed"; then compose restart loki >/dev/null && echo 
 if grep -q ' grafana/provisioning/' <<<"$changed"; then compose restart grafana >/dev/null && echo "restart: grafana (provisioning)"; fi
 # dashboards (grafana/dashboards/*.json) need nothing: Grafana reads that folder again every 60 s
 
-# 5. nothing may listen beyond loopback
+# 6. nothing may listen beyond loopback, except Grafana on the CT address (behind the firewall above)
 sleep 15
 ports='3000|3100|9091|9096|9100|9113|9115|12345'
-if ss -H -ltn | awk '{print $4}' | grep -E ":($ports)\$" | grep -vE '^(127\.0\.0\.1|\[::1\]):'; then
+if ss -H -ltn | awk '{print $4}' | grep -E ":($ports)\$" | grep -vE '^(127\.0\.0\.1|\[::1\]):' | grep -vx '10\.10\.10\.26:3000'; then
   echo "ERROR: a monitoring port listens beyond loopback (see above); stopping the stack" >&2
   compose down
   exit 1
 fi
 compose ps --format 'table {{.Service}}\t{{.Status}}'
-echo "Grafana: http://localhost:3000"
+echo "Grafana: https://grafana.lab.guilhermefilho.com (via NPM)"

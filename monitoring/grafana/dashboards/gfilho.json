@@ -1,9 +1,9 @@
 {
   "uid": "gfilho-overview",
-  "title": "gfilho.net — Monitoring",
-  "description": "gfilho.net on one page: status, lifecycle, uptime and alerts first, then latency and traffic, visitors and security, services, tunnel, web server, host, publishing and logs",
+  "title": "guilhermefilho.com — Monitoring",
+  "description": "guilhermefilho.com on one page: status, lifecycle, uptime and alerts first, then latency and traffic, visitors and security, services, tunnel, web server, host, publishing and logs",
   "tags": [
-    "gfilho.net",
+    "guilhermefilho.com",
     "website"
   ],
   "timezone": "browser",
@@ -65,11 +65,11 @@
         },
         "enable": true,
         "iconColor": "#FF9830",
-        "name": "WSL starts",
+        "name": "Host starts",
         "expr": "time() - node_boot_time_seconds < 600",
         "step": "1m",
-        "titleFormat": "WSL started",
-        "textFormat": "WSL was not running before this point: the site was offline"
+        "titleFormat": "CT 107 started",
+        "textFormat": "CT 107 was not running before this point: the site was offline"
       },
       {
         "datasource": {
@@ -97,7 +97,7 @@
     },
     {
       "title": "Live site",
-      "url": "https://gfilho.net/",
+      "url": "https://guilhermefilho.com/",
       "type": "link",
       "targetBlank": true,
       "icon": "external link"
@@ -115,7 +115,7 @@
       "id": 1,
       "type": "stat",
       "title": "Status",
-      "description": "Is the site reachable right now? Public site = all public pages pass from the internet (DNS → Cloudflare → tunnel → nginx); Origin = nginx answered directly. Public DOWN with Origin UP points at Cloudflare or the tunnel; both DOWN at nginx or WSL. UNKNOWN = Prometheus cannot reach the probe exporter. Response time colours follow the web.dev TTFB guidance (0.8 s / 1.8 s). p95, Availability and Monitored cover the selected range; Availability counts only the time monitoring was running, and Monitored says how much of the range that was (below 100 % = WSL or the stack was off). The probes run from this PC, so a local network fault looks like an outage: pair this with an external uptime monitor (README → Monitoring).",
+      "description": "Is the site reachable right now? Public site = all public pages pass from the internet (DNS → Cloudflare → tunnel → nginx); Origin = nginx answered directly. Public DOWN with Origin UP points at Cloudflare or the tunnel; both DOWN at nginx or CT 107. UNKNOWN = Prometheus cannot reach the probe exporter. Response time colours follow the web.dev TTFB guidance (0.8 s / 1.8 s). p95, Availability and Monitored cover the selected range; Availability counts only the time monitoring was running, and Monitored says how much of the range that was (below 100 % = CT 107 or the stack was off). The probes run from the home network (CT 107 on Proxmox), so a local network fault looks like an outage: pair this with an external uptime monitor (README → Monitoring).",
       "gridPos": {
         "x": 0,
         "y": 0,
@@ -169,7 +169,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(max(probe_duration_seconds{job=\"blackbox_public\", instance=\"https://gfilho.net/\"})) or on() vector(NaN)",
+          "expr": "(max(probe_duration_seconds{job=\"blackbox_public\", instance=\"https://guilhermefilho.com/\"})) or on() vector(NaN)",
           "legendFormat": ""
         },
         {
@@ -180,7 +180,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(max(quantile_over_time(0.95, probe_duration_seconds{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}[$__range]))) or on() vector(NaN)",
+          "expr": "(max(quantile_over_time(0.95, probe_duration_seconds{job=\"blackbox_public\", instance=\"https://guilhermefilho.com/\"}[$__range]))) or on() vector(NaN)",
           "legendFormat": ""
         },
         {
@@ -191,7 +191,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(sum(sum_over_time(probe_success{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}[$__range])) / sum(count_over_time(probe_success{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}[$__range]))) or on() vector(NaN)",
+          "expr": "(sum(sum_over_time(probe_success{job=\"blackbox_public\", instance=\"https://guilhermefilho.com/\"}[$__range])) / sum(count_over_time(probe_success{job=\"blackbox_public\", instance=\"https://guilhermefilho.com/\"}[$__range]))) or on() vector(NaN)",
           "legendFormat": ""
         },
         {
@@ -202,7 +202,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(clamp_max(sum(count_over_time(probe_success{job=\"blackbox_public\", instance=\"https://gfilho.net/\"}[$__range])) / ($__range_s / 60), 1)) or on() vector(NaN)",
+          "expr": "(clamp_max(sum(count_over_time(probe_success{job=\"blackbox_public\", instance=\"https://guilhermefilho.com/\"}[$__range])) / ($__range_s / 60), 1)) or on() vector(NaN)",
           "legendFormat": ""
         },
         {
@@ -746,7 +746,7 @@
       "id": 2,
       "type": "stat",
       "title": "Lifecycle",
-      "description": "Time left until the TLS certificate (earliest expiry among every HTTPS address probed; Cloudflare renews it) and /.well-known/security.txt expire (renew it before 30 days: the SecurityTxtExpiringSoon alert fires then). WSL offline = time WSL was not running, from the systemd journal: the site was down then.",
+      "description": "Time left until the TLS certificate (earliest expiry among every HTTPS address probed; Cloudflare renews it) and /.well-known/security.txt expire (renew it before 30 days: the SecurityTxtExpiringSoon alert fires then). Host offline = time CT 107 was not running, from the systemd journal: the site was down then.",
       "gridPos": {
         "x": 0,
         "y": 4,
@@ -800,7 +800,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(gfilho_wsl_offline_seconds{window=\"24h\"}) or on() vector(NaN)",
+          "expr": "(gfilho_host_offline_seconds{window=\"24h\"}) or on() vector(NaN)",
           "legendFormat": ""
         },
         {
@@ -811,7 +811,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(gfilho_wsl_offline_seconds{window=\"7d\"}) or on() vector(NaN)",
+          "expr": "(gfilho_host_offline_seconds{window=\"7d\"}) or on() vector(NaN)",
           "legendFormat": ""
         }
       ],
@@ -1001,7 +1001,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "WSL offline · 24 h"
+                "value": "Host offline · 24 h"
               },
               {
                 "id": "unit",
@@ -1053,7 +1053,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "WSL offline · 7 d"
+                "value": "Host offline · 7 d"
               },
               {
                 "id": "unit",
@@ -1124,7 +1124,7 @@
       "id": 3,
       "type": "state-timeline",
       "title": "Uptime",
-      "description": "Every check as one status line. Green = OK, red = failing, blank = no data (WSL or the monitoring stack was not running). Public pages every 60 s, origin and staging every 30 s, 301 redirects and DNS every 5 min.",
+      "description": "Every check as one status line. Green = OK, red = failing, blank = no data (CT 107 or the monitoring stack was not running). Public pages every 60 s, origin and staging every 30 s, 301 redirects and DNS every 5 min.",
       "gridPos": {
         "x": 0,
         "y": 7,
@@ -1336,7 +1336,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "Public response time",
-      "description": "Total time of each probe: the public pages through Cloudflare and the tunnel, and nginx answered directly (origin). Logarithmic axis, so both are readable; dashed line = 0.8 s (web.dev \"good\" TTFB). These are synthetic probes from this PC, not the latency of real visitors.",
+      "description": "Total time of each probe: the public pages through Cloudflare and the tunnel, and nginx answered directly (origin). Logarithmic axis, so both are readable; dashed line = 0.8 s (web.dev \"good\" TTFB). These are synthetic probes from CT 107 on the home network, not the latency of real visitors.",
       "gridPos": {
         "x": 0,
         "y": 22,
@@ -3441,7 +3441,7 @@
       "id": 22,
       "type": "stat",
       "title": "Services now",
-      "description": "systemd state of the hosting services (RUNNING, STOPPED or FAILED; NO DATA = node-exporter is not answering), units in a failed state, times systemd restarted nginx or cloudflared after a crash (Restart=on-failure) since WSL started, and how long WSL has been running.",
+      "description": "systemd state of the hosting services (RUNNING, STOPPED or FAILED; NO DATA = node-exporter is not answering), units in a failed state, times systemd restarted nginx or cloudflared after a crash (Restart=on-failure) since CT 107 started, and how long CT 107 has been running.",
       "gridPos": {
         "x": 0,
         "y": 69,
@@ -4013,7 +4013,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "WSL running for"
+                "value": "Host running for"
               },
               {
                 "id": "unit",
@@ -5466,7 +5466,7 @@
       "id": 32,
       "type": "timeseries",
       "title": "Response time by phase",
-      "description": "Where the time of the probe to https://gfilho.net/ goes (stacked; the total is the probe time): DNS, connect, TLS, processing (Cloudflare edge → tunnel → nginx until the first byte) and transfer.",
+      "description": "Where the time of the probe to https://guilhermefilho.com/ goes (stacked; the total is the probe time): DNS, connect, TLS, processing (Cloudflare edge → tunnel → nginx until the first byte) and transfer.",
       "gridPos": {
         "x": 16,
         "y": 92,
@@ -5486,7 +5486,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (phase) (probe_http_duration_seconds{job=\"blackbox_public\", instance=\"https://gfilho.net/\"})",
+          "expr": "max by (phase) (probe_http_duration_seconds{job=\"blackbox_public\", instance=\"https://guilhermefilho.com/\"})",
           "legendFormat": "{{phase}}"
         }
       ],
@@ -5549,7 +5549,7 @@
     {
       "id": 33,
       "type": "row",
-      "title": "Host · WSL",
+      "title": "Host · LXC 107",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -5563,7 +5563,7 @@
       "id": 34,
       "type": "timeseries",
       "title": "CPU & memory",
-      "description": "Busy CPU (everything but idle) and memory in use (total minus available) of the WSL VM, which the Ascender lab shares.",
+      "description": "Busy CPU (everything but idle) and memory in use (total minus available) of CT 107 (its own limits: 2 cores, 2 GB).",
       "gridPos": {
         "x": 0,
         "y": 101,
@@ -5659,7 +5659,7 @@
       "id": 35,
       "type": "timeseries",
       "title": "Memory",
-      "description": "Used and available memory in the WSL VM (stacked: the top is the total).",
+      "description": "Used and available memory in CT 107 (stacked: the top is the total).",
       "gridPos": {
         "x": 8,
         "y": 101,
@@ -5779,7 +5779,7 @@
       "id": 36,
       "type": "timeseries",
       "title": "Pressure (PSI)",
-      "description": "Linux pressure stall information: share of time at least one task had to wait for CPU, memory or I/O. Sustained values mean the VM is short of that resource even when the usage figures look fine.",
+      "description": "Linux pressure stall information: share of time at least one task had to wait for CPU, memory or I/O. Sustained values mean the container is short of that resource even when the usage figures look fine.",
       "gridPos": {
         "x": 16,
         "y": 101,
@@ -5923,7 +5923,7 @@
       "id": 37,
       "type": "timeseries",
       "title": "Disk space",
-      "description": "Used space, computed like df. \"/\" is the WSL virtual disk: it reports 1 TB but grows inside a file on the Windows drive C:, so C: is the real limit. Dashed line: 90 % (DiskAlmostFull and HostDriveAlmostFull fire at 10 % free).",
+      "description": "Used space of the CT 107 disk (16 GB on local-lvm), computed like df. Dashed line: 90 % (DiskAlmostFull fires at 10 % free).",
       "gridPos": {
         "x": 0,
         "y": 109,
@@ -5944,18 +5944,7 @@
             "uid": "prometheus"
           },
           "expr": "(node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_free_bytes{mountpoint=\"/\"}) / (node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_free_bytes{mountpoint=\"/\"} + node_filesystem_avail_bytes{mountpoint=\"/\"})",
-          "legendFormat": "/ (WSL virtual disk)"
-        },
-        {
-          "refId": "B",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "(node_filesystem_size_bytes{mountpoint=\"/mnt/c\"} - node_filesystem_free_bytes{mountpoint=\"/mnt/c\"}) / (node_filesystem_size_bytes{mountpoint=\"/mnt/c\"} - node_filesystem_free_bytes{mountpoint=\"/mnt/c\"} + node_filesystem_avail_bytes{mountpoint=\"/mnt/c\"})",
-          "legendFormat": "C: (Windows drive holding the virtual disk)"
+          "legendFormat": "/ (CT 107 disk)"
         }
       ],
       "fieldConfig": {
